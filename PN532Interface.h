@@ -39,7 +39,7 @@ public:
     * @return   0       success
     *           not 0   failed
     */
-    virtual int8_t writeCommand(const uint8_t *header, uint8_t hlen, const uint8_t *body = 0, uint8_t blen = 0) = 0;
+    virtual int8_t writeCommand(const uint8_t *header, uint8_t hlen, const uint8_t *body, uint8_t blen) = 0;
     /**
     * @brief    write a command and check ack
     * @param    header  packet header
@@ -49,7 +49,7 @@ public:
     * @return   0       success
     *           not 0   failed
     */
-    virtual int8_t writeCommand(const uint8_t *header, uint8_t hlen, const uint8_t *body = 0, uint16_t blen = 0) = 0;
+    virtual int8_t writeCommand(const uint8_t *header, uint8_t hlen, const uint8_t *body, uint16_t blen) = 0;
 
     /**
     * @brief    read the response of a command, strip prefix and suffix

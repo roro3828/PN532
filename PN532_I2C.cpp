@@ -151,33 +151,35 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
     return (int32_t)length;
 }
 int8_t PN532_I2C::readResponse(uint8_t buf[], uint16_t *len, uint16_t timeout){
-    uint16_t length=getResponseLength(8,timeout);
-    if(length<0){
-        return length;
+    int32_t res=getResponseLength(8,timeout);
+    if(res<0){
+        return res;
     }
+    uint16_t length=res&(0xFFFF);
     DMSG("receve len: ");
     DMSG(length);
     DMSG("\n");
+    if (*len<length){
+        DMSG("Response is too big\n");
+        return PN532_NO_SPACE; // not enough space
+    }
 
     sendNack();
-    
+
     if(0xFF<=length){
-        length=getResponseLength(11+length,timeout);
+        res=getResponseLength(11+length,timeout);
     }
     else{
-        length=getResponseLength(8+length,timeout);
+        res=getResponseLength(8+length,timeout);
     }
-    if(length<0){
-        return length;
+    if(res<0){
+        return res;
     }
 
     if(read()!=PN532_PN532TOHOST){
         return PN532_INVALID_FRAME;
     }
 
-    if (*len<length){
-        return PN532_NO_SPACE; // not enough space
-    }
     *len=length;
 
     DMSG("read:  ");
