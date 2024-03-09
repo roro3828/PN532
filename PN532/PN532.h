@@ -140,6 +140,17 @@ public:
         DEP_ACTIVE_212          =0x81,
         DEP_ACTIVE_424          =0x82
     };
+    // card data
+    struct PICC{
+        struct TypeB{
+            uint8_t tg;
+            uint8_t pupi[4];
+            uint8_t ap[4];
+            uint8_t prot[3];
+        };
+    };
+
+
     PN532(PN532Interface &interface);
 
     // Generic PN532 functions
@@ -169,7 +180,7 @@ public:
      * @param[out] targetdatalen Length of targetdata.
      * @return The Number of initialized Targets (minimum 0, maximum 2 targets)
     */
-    uint8_t InListPassiveTarget(const uint8_t maxtg,const PN532::Type type,const uint8_t *data,const uint8_t datalen,uint8_t *targetdata,uint8_t *targetdatalen);
+    uint8_t inListPassiveTarget(const uint8_t maxtg,const PN532::Type type,const uint8_t *data,const uint8_t datalen,uint8_t *targetdata,uint8_t *targetdatalen);
     /**
      * @brief This command is used to poll card(s) / target(s) of specified Type present in the RF field.
      * @param[in] pollNr specifies the number of polling (one polling is a polling for each Type j).
@@ -182,18 +193,37 @@ public:
      * @param[out] foundlen The number of target(s) found (maximum is two targets, only one of them can be DEP compliant)
      * @return found count
     */
-    uint8_t InAutoPoll(const uint8_t pollNr,const uint8_t period,const PN532::Type *types,const uint8_t typeslen,uint8_t *foundtypes,uint8_t *foundlen);
+    uint8_t inAutoPoll(const uint8_t pollNr,const uint8_t period,const PN532::Type *types,const uint8_t typeslen,uint8_t *foundtypes,uint8_t *foundlen);
+
+    uint8_t PollingTypeB(const uint8_t maxtg,const uint8_t afi,PN532::PICC::TypeB *picc);
+
+
+    /**
+     * @brief This command is used to support protocol data exchanges between the PN532 as initiator and a target. 
+     * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
+     * @param[in] send Data
+     * @param[in] sendlen
+     * @param[out] response
+     * @param[out] responselen
+     * @return Status code
+    */
+    uint8_t inDataExchange(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,uint8_t *response,uint8_t *responselen);
 
     // APDU Commands
 
-    bool select(const uint8_t *id,const uint8_t idlen,const uint8_t p1,const uint8_t p2,uint8_t *status);
-    bool select(const uint8_t *id,const uint8_t idlen,const uint8_t p1,const uint8_t p2);
-    bool selectDF(const uint8_t *id,const uint8_t idlen);
-    bool selectEF(const uint8_t *id,const uint8_t idlen);
-    bool readBinary(const uint8_t p1,const uint8_t p2,const uint16_t Lelen,uint8_t *response,uint16_t *responseLength,uint8_t *status);
-    bool readBinary(const uint8_t p1,const uint8_t p2,const uint16_t Lelen,uint8_t *response,uint16_t *responseLength);
-    bool verify(const uint8_t *verificationdata,const uint8_t datalen,uint8_t *status);
-    bool verify(const uint8_t *verificationdata,const uint8_t datalen);
+    // APDU Commands
+    struct APDU{
+        bool select(const uint8_t *id,const uint8_t idlen,const uint8_t p1,const uint8_t p2,uint8_t *status);
+        bool select(const uint8_t *id,const uint8_t idlen,const uint8_t p1,const uint8_t p2);
+        bool selectDF(const uint8_t *id,const uint8_t idlen);
+        bool selectEF(const uint8_t *id,const uint8_t idlen);
+        bool readBinary(const uint8_t p1,const uint8_t p2,const uint16_t Lelen,uint8_t *response,uint16_t *responseLength,uint8_t *status);
+        bool readBinary(const uint8_t p1,const uint8_t p2,const uint16_t Lelen,uint8_t *response,uint16_t *responseLength);
+        bool verify(const uint8_t *verificationdata,const uint8_t datalen,uint8_t *status);
+        bool verify(const uint8_t *verificationdata,const uint8_t datalen);
+    };
+
+    
 
     // Help functions to display formatted text
     static void PrintHex(const uint8_t *data, const uint32_t numBytes);

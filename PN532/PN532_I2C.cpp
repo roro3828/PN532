@@ -153,6 +153,9 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
 int8_t PN532_I2C::readResponse(uint8_t buf[], uint16_t *len, uint16_t timeout){
     int32_t res=getResponseLength(8,timeout);
     if(res<0){
+        DMSG("faild to get len:");
+        DMSG(res);
+        DMSG("\n");
         return res;
     }
     uint16_t length=res&(0xFFFF);
