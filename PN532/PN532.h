@@ -116,7 +116,10 @@
 #define FELICA_WRITE_MAX_BLOCK_NUM          10 // for typical FeliCa card
 #define FELICA_REQ_SERVICE_MAX_NODE_NUM     32
 
-#define PN532_PACKET_BUF_LEN                2048
+#define PN532_PACKET_BUF_LEN                512
+#define PN532_APDU_BUF_LEN                  512
+#define IN_LIST_PASSIVE_TARGET_USE_SIZE     3
+#define IN_DATA_EXCHANGE_USE_SIZE           2
 
 class PN532
 {
@@ -141,12 +144,37 @@ public:
         DEP_ACTIVE_424          =0x82
     };
     // card data
-    struct PICC{
+    class PICC{
+        public:
+        struct TypeA{
+            uint8_t tg;
+            uint8_t uid[10];
+            uint8_t uidlen;
+        };
         struct TypeB{
             uint8_t tg;
             uint8_t pupi[4];
             uint8_t ap[4];
             uint8_t prot[3];
+        };
+        struct Felica{
+            uint8_t tg;
+            uint8_t idm[8];
+            uint8_t pmm[8];
+            uint16_t systemcode;
+            PN532 *pcd;
+            // commands
+            /**
+             * @brief Read block data from service whitch dosen't require encryption.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+             * @param[in] service_count Service count. (minimum 0, maximum 16)
+             * @param[in] servicecode_list List of service codes. Size must be service_count
+             * @param[in] block_count Block count.
+             * @param[in] block_list List of block. Minimum size is 2*block_count, maximum is 3*block_count
+             * @param[out] response Response blocks.
+             * @param[out] response_count Response block count.
+             * @return StatusFlag See 4.5 https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+            */
+            uint16_t readWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count);
         };
     };
 
@@ -195,7 +223,9 @@ public:
     */
     uint8_t inAutoPoll(const uint8_t pollNr,const uint8_t period,const PN532::Type *types,const uint8_t typeslen,uint8_t *foundtypes,uint8_t *foundlen);
 
+    uint8_t PollingTypeA(const uint8_t maxtg,const uint8_t *selectuid,const uint8_t uidlen,PN532::PICC::TypeA *picc);
     uint8_t PollingTypeB(const uint8_t maxtg,const uint8_t afi,PN532::PICC::TypeB *picc);
+    uint8_t PollingFelica(const uint8_t maxtg,const uint16_t systemcode,const uint8_t req,const uint8_t timeslot,PN532::PICC::Felica *picc);
 
 
     /**
@@ -207,9 +237,49 @@ public:
      * @param[out] responselen
      * @return Status code
     */
-    uint8_t inDataExchange(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,uint8_t *response,uint8_t *responselen);
-
-    // APDU Commands
+    uint8_t inDataExchange(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,uint8_t *response,uint16_t *responselen);
+    /**
+     * @brief This command is used to support protocol data exchanges between the PN532 as initiator and a target. 
+     * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
+     * @param[in] send Data
+     * @param[in] sendlen
+     * @param[in] send2 Data
+     * @param[in] send2len
+     * @param[out] response
+     * @param[out] responselen
+     * @return Status code
+    */
+    uint8_t inDataExchange2(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,uint8_t *response,uint16_t *responselen);
+    /**
+     * @brief This command is used to support protocol data exchanges between the PN532 as initiator and a target. 
+     * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
+     * @param[in] send Data
+     * @param[in] sendlen
+     * @param[in] send2 Data
+     * @param[in] send2len
+     * @param[in] send3 Data
+     * @param[in] send3len
+     * @param[out] response
+     * @param[out] responselen
+     * @return Status code
+    */
+    uint8_t inDataExchange3(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,const uint8_t *send3,const uint8_t send3len,uint8_t *response,uint16_t *responselen);
+    /**
+     * @brief This command is used to support protocol data exchanges between the PN532 as initiator and a target. 
+     * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
+     * @param[in] send Data
+     * @param[in] sendlen
+     * @param[in] send2 Data
+     * @param[in] send2len
+     * @param[in] send3 Data
+     * @param[in] send3len
+     * @param[in] send4 Data
+     * @param[in] send4len
+     * @param[out] response
+     * @param[out] responselen
+     * @return Status code
+    */
+    uint8_t inDataExchange4(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,const uint8_t *send3,const uint8_t send3len,const uint8_t *send4,const uint8_t send4len,uint8_t *response,uint16_t *responselen);
 
     // APDU Commands
     struct APDU{
@@ -222,6 +292,21 @@ public:
         bool verify(const uint8_t *verificationdata,const uint8_t datalen,uint8_t *status);
         bool verify(const uint8_t *verificationdata,const uint8_t datalen);
     };
+
+    // felica commands
+
+    /**
+     * @brief Read block data from service whitch dosen't require encryption.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+     * @param[in] felica Felica
+     * @param[in] service_count Service count. (minimum 0, maximum 16)
+     * @param[in] servicecode_list List of service codes. Size must be service_count
+     * @param[in] block_count Block count.
+     * @param[in] block_list List of block. Minimum size is 2*block_count, maximum is 3*block_count
+     * @param[out] response Response blocks.
+     * @param[out] response_count Response block count.
+     * @return StatusFlag See 4.5 https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+    */
+    uint16_t felica_readWithoutEncryption(const PICC::Felica *felica,const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count);
 
     
 
@@ -247,6 +332,7 @@ private:
     uint8_t _felicaPMm[8]; // FeliCa PMm (PAD)
 
     uint8_t pn532_packetbuffer[PN532_PACKET_BUF_LEN];
+    uint8_t pn532_padubuffer[PN532_APDU_BUF_LEN];
 
     PN532Interface *_interface;
 };
