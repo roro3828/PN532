@@ -222,6 +222,9 @@ uint16_t PN532::readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,co
     }
     status=pn532_packetbuffer[length-2];
     status=(status<<8)+pn532_packetbuffer[length-1];
+    if(response==NULL||responseLength==NULL){
+        return status;
+    }
     if(status!=0x9000){
         *responseLength=0;
         return status;
@@ -230,7 +233,7 @@ uint16_t PN532::readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,co
     memmove(response,pn532_packetbuffer,length-2);
     return status;
 }
-uint16_t PN532::selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen){
+uint16_t PN532::selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response,uint16_t *responseLength){
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=0x00;
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+1]=APDU_CMD_SELECT_FILE;
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2]=(uint8_t)((selectionControl>>8)&0xFF);
@@ -252,13 +255,22 @@ uint16_t PN532::selectFile(const uint8_t tg,const uint16_t selectionControl,cons
     }
     status=pn532_packetbuffer[length-2];
     status=(status<<8)+pn532_packetbuffer[length-1];
+    if(response==NULL||responseLength==NULL){
+        return status;
+    }
+    if(status!=0x9000){
+        *responseLength=0;
+        return status;
+    }
+    *responseLength=length-2;
+    memmove(response,pn532_packetbuffer,length-2);
     return status;
 }
 uint16_t PN532::selectDF(const uint8_t tg,const uint8_t *id,const uint8_t idlen){
-    return selectFile(tg,0x040C,id,idlen);
+    return selectFile(tg,0x040C,id,idlen,NULL,NULL);
 }
 uint16_t PN532::selectEF(const uint8_t tg,const uint8_t *id,const uint8_t idlen){
-    return selectFile(tg,0x020C,id,idlen);
+    return selectFile(tg,0x020C,id,idlen,NULL,NULL);
 }
 uint16_t PN532::verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen){
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=0x00;

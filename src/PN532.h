@@ -272,7 +272,7 @@ public:
 
     // APDU Commands
     uint16_t readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength);
-    uint16_t selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen);
+    uint16_t selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response,uint16_t *responseLength);
     uint16_t selectDF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
     uint16_t selectEF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
     uint16_t verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen);
