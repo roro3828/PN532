@@ -121,6 +121,15 @@
 #define IN_LIST_PASSIVE_TARGET_USE_SIZE     3
 #define IN_DATA_EXCHANGE_USE_SIZE           2
 
+// APDU Commands
+#define APDU_CMD_READ_BINARY                0xB0
+#define APDU_CMD_WRITE_BINARY               0xD0
+#define APDU_CMD_SELECT_FILE                0xA4
+#define APDU_CMD_VERIFY                     0x20
+#define APDU_CMD_VERIFY_SPECIFIC_REFERENCE  0x80
+
+#define APDU_STATUS_SUCCESS                 0x9000
+
 class PN532
 {
 public:
@@ -175,6 +184,17 @@ public:
              * @return StatusFlag See 4.5 https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
             */
             uint16_t readWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count);
+            /**
+             * @brief Write block data to service whitch dosen't require encryption.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+             * @param[in] felica Felica
+             * @param[in] service_count Service count. (minimum 0, maximum 16)
+             * @param[in] servicecode_list List of service codes. Size must be service_count
+             * @param[in] block_count Block count.
+             * @param[in] block_list List of block. Minimum size is 2*block_count, maximum is 3*block_count
+             * @param[in] blockData Data to write.
+             * @return StatusFlag See 4.5 https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+            */
+            uint16_t writeWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,const uint8_t blockData[][16]);
         };
     };
 
@@ -251,16 +271,11 @@ public:
     uint8_t inDataExchange(const uint8_t tg,const uint8_t **sendlist,const uint16_t *sendlenlist,const uint8_t sendcount,uint8_t *response,uint16_t *responselen);
 
     // APDU Commands
-    struct APDU{
-        bool select(const uint8_t *id,const uint8_t idlen,const uint8_t p1,const uint8_t p2,uint8_t *status);
-        bool select(const uint8_t *id,const uint8_t idlen,const uint8_t p1,const uint8_t p2);
-        bool selectDF(const uint8_t *id,const uint8_t idlen);
-        bool selectEF(const uint8_t *id,const uint8_t idlen);
-        bool readBinary(const uint8_t p1,const uint8_t p2,const uint16_t Lelen,uint8_t *response,uint16_t *responseLength,uint8_t *status);
-        bool readBinary(const uint8_t p1,const uint8_t p2,const uint16_t Lelen,uint8_t *response,uint16_t *responseLength);
-        bool verify(const uint8_t *verificationdata,const uint8_t datalen,uint8_t *status);
-        bool verify(const uint8_t *verificationdata,const uint8_t datalen);
-    };
+    uint16_t readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength);
+    uint16_t selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen);
+    uint16_t selectDF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
+    uint16_t selectEF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
+    uint16_t verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen);
 
     // felica commands
     bool felica_requestService(const PICC::Felica *felica,const uint8_t node_count,const uint16_t *nodecode_list,uint16_t *response,uint8_t *responseLength);
@@ -279,7 +294,7 @@ public:
     */
     uint16_t felica_readWithoutEncryption(const PICC::Felica *felica,const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count);
     /**
-     * @brief Read block data from service whitch dosen't require encryption.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+     * @brief Write block data to service whitch dosen't require encryption.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
      * @param[in] felica Felica
      * @param[in] service_count Service count. (minimum 0, maximum 16)
      * @param[in] servicecode_list List of service codes. Size must be service_count
@@ -300,8 +315,6 @@ public:
         *len = sizeof(pn532_packetbuffer) - 4;
         return pn532_packetbuffer;
     };
-
-
 private:
     uint8_t _uid[7];  // ISO14443A uid
     uint8_t _uidLen;  // uid len
@@ -318,5 +331,4 @@ private:
 
     PN532Interface *_interface;
 };
-
 #endif

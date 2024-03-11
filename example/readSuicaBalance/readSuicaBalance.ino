@@ -12,6 +12,19 @@ void setup()
     Serial.begin(115200);
 
     pn532i2c.begin(2,1);
+    delay(100);
+    uint32_t versiondata=nfc.getFirmwareVersion();
+    if(!versiondata){
+        Serial.print("Didn't find PN53x board");
+        while (1); // halt
+    }
+    Serial.print("Found chip PN5");
+    Serial.println((versiondata>>24) & 0xFF, HEX); 
+    Serial.print("Firmware ver. ");
+    Serial.print((versiondata>>16) & 0xFF, DEC); 
+    Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+
+
     nfc.SAMConfig();
 }
 void loop()

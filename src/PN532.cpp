@@ -199,8 +199,97 @@ uint8_t PN532::inDataExchange(const uint8_t tg,const uint8_t *send,const uint16_
     return inDataExchange(tg,sendlist,&sendlen,(const uint8_t)1,response,responselen);
 }
 
-bool PN532::APDU::select(const uint8_t *id,const uint8_t idlen,const uint8_t p1,const uint8_t p2,uint8_t *status){
-    
+uint16_t PN532::readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength){
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=0x00;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+1]=APDU_CMD_READ_BINARY;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2]=p1;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+3]=p2;
+    uint16_t cmdsize=5;
+    if(le<=0xFF){
+        pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=(uint8_t)(le&0xFF);
+    }
+    else{
+        cmdsize=7;
+        pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=0x00;
+        pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=(uint8_t)((le>>8)&0xFF);
+        pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=(uint8_t)(le&0xFF);
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    uint16_t status=inDataExchange(tg,&pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],cmdsize,pn532_packetbuffer,&length);
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return (0xFF<<8)|status;
+    }
+    status=pn532_packetbuffer[length-2];
+    status=(status<<8)+pn532_packetbuffer[length-1];
+    if(status!=0x9000){
+        *responseLength=0;
+        return status;
+    }
+    *responseLength=length-2;
+    memmove(response,pn532_packetbuffer,length-2);
+    return status;
+}
+uint16_t PN532::selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen){
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=0x00;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+1]=APDU_CMD_SELECT_FILE;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2]=(uint8_t)((selectionControl>>8)&0xFF);
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+3]=(uint8_t)(selectionControl&0xFF);
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=idlen;
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    const uint8_t *sendlist[]={
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],
+        id
+    };
+    const uint16_t sendlenlist[]={
+        5,
+        idlen
+    };
+    uint16_t status=inDataExchange(tg,sendlist,sendlenlist,2,pn532_packetbuffer,&length);
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return (0xFF<<8)|status;
+    }
+    status=pn532_packetbuffer[length-2];
+    status=(status<<8)+pn532_packetbuffer[length-1];
+    return status;
+}
+uint16_t PN532::selectDF(const uint8_t tg,const uint8_t *id,const uint8_t idlen){
+    return selectFile(tg,0x040C,id,idlen);
+}
+uint16_t PN532::selectEF(const uint8_t tg,const uint8_t *id,const uint8_t idlen){
+    return selectFile(tg,0x020C,id,idlen);
+}
+uint16_t PN532::verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen){
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=0x00;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+1]=APDU_CMD_VERIFY;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2]=0x00;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+3]=qualifier;
+    uint16_t headlen;
+    if(0<datalen){
+        pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=datalen;
+        headlen=5;
+    }
+    else{
+        headlen=4;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    const uint8_t *sendlist[]={
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],
+        verificationdata
+    };
+    const uint16_t sendlenlist[]={
+        headlen,
+        datalen
+    };
+    uint16_t status=inDataExchange(tg,sendlist,sendlenlist,2,pn532_packetbuffer,&length);
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return (0xFF<<8)|status;
+    }
+    status=pn532_packetbuffer[length-2];
+    status=(status<<8)+pn532_packetbuffer[length-1];
+    return status;
 }
 
 bool PN532::felica_requestService(const PICC::Felica *felica,const uint8_t node_count,const uint16_t *nodecode_list,uint16_t *response,uint8_t *responseLength){
@@ -345,4 +434,7 @@ uint16_t PN532::felica_writeWithoutEncryption(const PICC::Felica *felica,const u
 
 uint16_t PN532::PICC::Felica::readWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count){
     return this->pcd->felica_readWithoutEncryption(this,service_count,servicecode_list,block_count,block_list,response,response_count);
+}
+uint16_t PN532::PICC::Felica::writeWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,const uint8_t blockData[][16]){
+    return this->pcd->felica_writeWithoutEncryption(this,service_count,servicecode_list,block_count,block_list,blockData);
 }
