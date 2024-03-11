@@ -25,7 +25,8 @@ void PN532_I2C::wakeup()
     delay(500); // wait for all ready to manipulate pn532
 }
 
-int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t *body,const uint16_t blen,const uint8_t *body2,const uint16_t b2len,const uint8_t *body3,const uint16_t b3len,const uint8_t *body4,const uint16_t b4len){
+int8_t PN532_I2C::writeCommand(const uint8_t *header,const uint8_t hlen,const uint8_t **bodylist,const uint16_t *blenlist,const uint8_t bodycount){
+    DMSG("Write commands\n");
     command = header[0];
     _wire->beginTransmission(PN532_I2C_ADDRESS);
 
@@ -33,7 +34,13 @@ int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t
     write(PN532_STARTCODE1);
     write(PN532_STARTCODE2);
 
-    uint16_t length = hlen + blen + b2len + b3len + b4len + 1; // length of data field: TFI + DATA
+    uint16_t length = hlen + 1; // length of data field: TFI + DATA
+    DMSG("Length of data field:");
+    for(uint8_t i=0;i<bodycount;i++){
+        length+=blenlist[i];
+    }
+    DMSG(length);
+    DMSG("\n");
     if(0xFF<=length){
         if(265<=length){ // In the firmware implementation of the PN532, the maximum length of the packet data is limited to 264 bytes (265 bytes with TFI included).
             return PN532_EXCESS_DATA_MAX_LEN;
@@ -48,7 +55,9 @@ int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t
     write(PN532_HOSTTOPN532); // TFI
     uint8_t sum = PN532_HOSTTOPN532; // sum of TFI + DATA
 
-    DMSG("write: ");
+    DMSG("write Header: Length: ");
+    DMSG(hlen);
+    DMSG("\n");
 
     for (uint8_t i = 0; i < hlen; i++){
         if (write(header[i]))
@@ -64,59 +73,22 @@ int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t
         }
     }
 
-    for (uint16_t i = 0; i < blen; i++){
-        if (write(body[i]))
-        {
-            sum += body[i];
+    DMSG("\nwrite Body: ");
+    DMSG(length-hlen-1);
+    DMSG("\n");
+    for(uint8_t i=0;i<bodycount;i++){
+        for (uint16_t j=0;j<blenlist[i];j++){
+            if (write(bodylist[i][j]))
+            {
+                sum +=bodylist[i][j];
 
-            DMSG_HEX(body[i]);
-        }
-        else
-        {
-            DMSG("\nToo many data to send, I2C doesn't support such a big packet\n"); // I2C max packet: 32 bytes
-            return PN532_INVALID_FRAME;
-        }
-    }
-
-    for (uint16_t i = 0; i < b2len; i++){
-        if (write(body2[i]))
-        {
-            sum += body2[i];
-
-            DMSG_HEX(body2[i]);
-        }
-        else
-        {
-            DMSG("\nToo many data to send, I2C doesn't support such a big packet\n"); // I2C max packet: 32 bytes
-            return PN532_INVALID_FRAME;
-        }
-    }
-
-    for (uint16_t i = 0; i < b3len; i++){
-        if (write(body3[i]))
-        {
-            sum += body3[i];
-
-            DMSG_HEX(body3[i]);
-        }
-        else
-        {
-            DMSG("\nToo many data to send, I2C doesn't support such a big packet\n"); // I2C max packet: 32 bytes
-            return PN532_INVALID_FRAME;
-        }
-    }
-
-    for (uint16_t i = 0; i < b4len; i++){
-        if (write(body4[i]))
-        {
-            sum += body4[i];
-
-            DMSG_HEX(body4[i]);
-        }
-        else
-        {
-            DMSG("\nToo many data to send, I2C doesn't support such a big packet\n"); // I2C max packet: 32 bytes
-            return PN532_INVALID_FRAME;
+                DMSG_HEX(bodylist[i][j]);
+            }
+            else
+            {
+                DMSG("\nToo many data to send, I2C doesn't support such a big packet\n"); // I2C max packet: 32 bytes
+                return PN532_INVALID_FRAME;
+            }
         }
     }
 
@@ -131,13 +103,9 @@ int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t
     return readAckFrame();
 }
 int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t *body,const uint16_t blen){
-    return writeCommand(header,hlen,body,blen,NULL,0,NULL,0,NULL,0);
-}
-int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t *body,const uint16_t blen,const uint8_t *body2,const uint16_t b2len){
-    return writeCommand(header,hlen,body,blen,body2,b2len,NULL,0,NULL,0);
-}
-int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t *body,const uint16_t blen,const uint8_t *body2,const uint16_t b2len,const uint8_t *body3,const uint16_t b3len){
-    return writeCommand(header,hlen,body,blen,body2,b2len,body3,b3len,NULL,0);
+    DMSG("Write single body\n");
+    const uint8_t *bodylist[]={body};
+    return writeCommand(header,hlen,bodylist,&blen,(uint8_t)1);
 }
 
 int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){

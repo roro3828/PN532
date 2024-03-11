@@ -237,49 +237,18 @@ public:
      * @param[out] responselen
      * @return Status code
     */
-    uint8_t inDataExchange(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,uint8_t *response,uint16_t *responselen);
+    uint8_t inDataExchange(const uint8_t tg,const uint8_t *send,const uint16_t sendlen,uint8_t *response,uint16_t *responselen);
     /**
      * @brief This command is used to support protocol data exchanges between the PN532 as initiator and a target. 
      * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
-     * @param[in] send Data
-     * @param[in] sendlen
-     * @param[in] send2 Data
-     * @param[in] send2len
+     * @param[in] sendlist Pointer list of send data
+     * @param[in] sendlenlist List of send data length
+     * @param[in] sendcount Number of data list
      * @param[out] response
      * @param[out] responselen
      * @return Status code
     */
-    uint8_t inDataExchange2(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,uint8_t *response,uint16_t *responselen);
-    /**
-     * @brief This command is used to support protocol data exchanges between the PN532 as initiator and a target. 
-     * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
-     * @param[in] send Data
-     * @param[in] sendlen
-     * @param[in] send2 Data
-     * @param[in] send2len
-     * @param[in] send3 Data
-     * @param[in] send3len
-     * @param[out] response
-     * @param[out] responselen
-     * @return Status code
-    */
-    uint8_t inDataExchange3(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,const uint8_t *send3,const uint8_t send3len,uint8_t *response,uint16_t *responselen);
-    /**
-     * @brief This command is used to support protocol data exchanges between the PN532 as initiator and a target. 
-     * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
-     * @param[in] send Data
-     * @param[in] sendlen
-     * @param[in] send2 Data
-     * @param[in] send2len
-     * @param[in] send3 Data
-     * @param[in] send3len
-     * @param[in] send4 Data
-     * @param[in] send4len
-     * @param[out] response
-     * @param[out] responselen
-     * @return Status code
-    */
-    uint8_t inDataExchange4(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,const uint8_t *send3,const uint8_t send3len,const uint8_t *send4,const uint8_t send4len,uint8_t *response,uint16_t *responselen);
+    uint8_t inDataExchange(const uint8_t tg,const uint8_t **sendlist,const uint16_t *sendlenlist,const uint8_t sendcount,uint8_t *response,uint16_t *responselen);
 
     // APDU Commands
     struct APDU{
@@ -294,6 +263,8 @@ public:
     };
 
     // felica commands
+    bool felica_requestService(const PICC::Felica *felica,const uint8_t node_count,const uint16_t *nodecode_list,uint16_t *response,uint8_t *responseLength);
+    uint8_t felica_requestResponse(const PICC::Felica *felica);
 
     /**
      * @brief Read block data from service whitch dosen't require encryption.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
@@ -307,6 +278,17 @@ public:
      * @return StatusFlag See 4.5 https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
     */
     uint16_t felica_readWithoutEncryption(const PICC::Felica *felica,const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count);
+    /**
+     * @brief Read block data from service whitch dosen't require encryption.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+     * @param[in] felica Felica
+     * @param[in] service_count Service count. (minimum 0, maximum 16)
+     * @param[in] servicecode_list List of service codes. Size must be service_count
+     * @param[in] block_count Block count.
+     * @param[in] block_list List of block. Minimum size is 2*block_count, maximum is 3*block_count
+     * @param[in] blockData Data to write.
+     * @return StatusFlag See 4.5 https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+    */
+    uint16_t felica_writeWithoutEncryption(const PICC::Felica *felica,const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,const uint8_t blockData[][16]);
 
     
 

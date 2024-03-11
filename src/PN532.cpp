@@ -171,12 +171,12 @@ uint8_t PN532::PollingFelica(const uint8_t maxtg,const uint16_t systemcode,const
     return count;
 }
 
-uint8_t PN532::inDataExchange4(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,const uint8_t *send3,const uint8_t send3len,const uint8_t *send4,const uint8_t send4len,uint8_t *response,uint16_t *responselen){
+uint8_t PN532::inDataExchange(const uint8_t tg,const uint8_t **sendlist,const uint16_t *sendlenlist,const uint8_t sendcount,uint8_t *response,uint16_t *responselen){
     pn532_packetbuffer[0]=PN532_COMMAND_INDATAEXCHANGE;
     pn532_packetbuffer[1]=tg;
     *responselen=0;
 
-    if(_interface->writeCommand(pn532_packetbuffer,2,send,sendlen,send2,send2len,send3,send3len,send4,send4len)){
+    if(_interface->writeCommand(pn532_packetbuffer,2,sendlist,sendlenlist,sendcount)){
         return 0;
     }
     uint16_t length=PN532_PACKET_BUF_LEN;
@@ -194,18 +194,60 @@ uint8_t PN532::inDataExchange4(const uint8_t tg,const uint8_t *send,const uint8_
     memmove(response,&pn532_packetbuffer[2],*responselen);
     return status;
 }
-uint8_t PN532::inDataExchange3(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,const uint8_t *send3,const uint8_t send3len,uint8_t *response,uint16_t *responselen){
-    return inDataExchange4(tg,send,sendlen,send2,send2len,send3,send3len,NULL,0,response,responselen);
-}
-uint8_t PN532::inDataExchange2(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,const uint8_t *send2,const uint8_t send2len,uint8_t *response,uint16_t *responselen){
-    return inDataExchange4(tg,send,sendlen,send2,send2len,NULL,0,NULL,0,response,responselen);
-}
-uint8_t PN532::inDataExchange(const uint8_t tg,const uint8_t *send,const uint8_t sendlen,uint8_t *response,uint16_t *responselen){
-    return inDataExchange4(tg,send,sendlen,NULL,0,NULL,0,NULL,0,response,responselen);
+uint8_t PN532::inDataExchange(const uint8_t tg,const uint8_t *send,const uint16_t sendlen,uint8_t *response,uint16_t *responselen){
+    const uint8_t *sendlist[]={send};
+    return inDataExchange(tg,sendlist,&sendlen,(const uint8_t)1,response,responselen);
 }
 
 bool PN532::APDU::select(const uint8_t *id,const uint8_t idlen,const uint8_t p1,const uint8_t p2,uint8_t *status){
     
+}
+
+bool PN532::felica_requestService(const PICC::Felica *felica,const uint8_t node_count,const uint16_t *nodecode_list,uint16_t *response,uint8_t *responseLength){
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=11+2*node_count;
+    pn532_packetbuffer[1+IN_DATA_EXCHANGE_USE_SIZE]=FELICA_CMD_REQUEST_SERVICE;
+    pn532_packetbuffer[2+IN_DATA_EXCHANGE_USE_SIZE]=node_count;
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    const uint8_t *sendlist[]={
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],
+        felica->idm,
+        &node_count,
+        (uint8_t*)nodecode_list
+    };
+    const uint16_t sendlenlist[]={
+        2,
+        8,
+        1,
+        2*node_count
+    };
+    uint8_t status=inDataExchange(felica->tg,sendlist,sendlenlist,4,pn532_packetbuffer,&length);
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return false;
+    }
+    *responseLength=pn532_packetbuffer[10];
+    memmove((uint8_t*)response,&pn532_packetbuffer[11],2*pn532_packetbuffer[10]);
+    return true;
+}
+
+uint8_t PN532::felica_requestResponse(const PICC::Felica *felica){
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=10;
+    pn532_packetbuffer[1+IN_DATA_EXCHANGE_USE_SIZE]=FELICA_CMD_REQUEST_RESPONSE;
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    const uint8_t *sendlist[]={
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],
+        felica->idm
+    };
+    const uint16_t sendlenlist[]={
+        2,
+        8
+    };
+    uint8_t status=inDataExchange(felica->tg,sendlist,sendlenlist,2,pn532_packetbuffer,&length);
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return 0xFF;
+    }
+    return pn532_packetbuffer[10];
 }
 
 uint16_t PN532::felica_readWithoutEncryption(const PICC::Felica *felica,const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count){
@@ -220,12 +262,27 @@ uint16_t PN532::felica_readWithoutEncryption(const PICC::Felica *felica,const ui
     }
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=12+2*service_count+blocklen;
     pn532_packetbuffer[1+IN_DATA_EXCHANGE_USE_SIZE]=FELICA_CMD_READ_WITHOUT_ENCRYPTION;
-    for(uint8_t i=0;i<8;i++){
-        pn532_packetbuffer[2+IN_DATA_EXCHANGE_USE_SIZE+i]=felica->idm[i];
-    }
-    pn532_packetbuffer[10+IN_DATA_EXCHANGE_USE_SIZE]=service_count;
+    pn532_packetbuffer[2+IN_DATA_EXCHANGE_USE_SIZE]=service_count;
     uint16_t length=PN532_PACKET_BUF_LEN;
-    uint8_t status=inDataExchange4(felica->tg,&pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],11,(uint8_t*)servicecode_list,2*service_count,&block_count,1,block_list,blocklen,pn532_packetbuffer,&length);
+    const uint8_t *sendlist[]={
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],
+        felica->idm,
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2],
+        (uint8_t*)servicecode_list,
+        &block_count,
+        block_list
+    };
+    const uint16_t sendlenlist[]={
+        2,
+        8,
+        1,
+        2*service_count,
+        1,
+        blocklen
+    };
+
+
+    uint8_t status=inDataExchange(felica->tg,sendlist,sendlenlist,6,pn532_packetbuffer,&length);
     if(status&0b111111!=0){
         DMSG("Error");
         return status;
@@ -239,6 +296,50 @@ uint16_t PN532::felica_readWithoutEncryption(const PICC::Felica *felica,const ui
     }
     *response_count=pn532_packetbuffer[12];
     memmove((uint8_t*)response,&pn532_packetbuffer[13],16*pn532_packetbuffer[12]);
+    return statusflag;
+}
+uint16_t PN532::felica_writeWithoutEncryption(const PICC::Felica *felica,const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,const uint8_t blockData[][16]){
+    uint8_t blocklen=0;
+    for(uint8_t i=0;i<block_count;i++){
+        if((block_list[blocklen]>>7)&0x01==1){
+            blocklen+=2;
+        }
+        else{
+            blocklen+=3;
+        }
+    }
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=12+2*service_count+blocklen+block_count*16;
+    pn532_packetbuffer[1+IN_DATA_EXCHANGE_USE_SIZE]=FELICA_CMD_WRITE_WITHOUT_ENCRYPTION;
+    pn532_packetbuffer[2+IN_DATA_EXCHANGE_USE_SIZE]=service_count;
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    const uint8_t *sendlist[]={
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],
+        felica->idm,
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2],
+        (uint8_t*)servicecode_list,
+        &block_count,
+        block_list,
+        (uint8_t*)blockData
+    };
+    const uint16_t sendlenlist[]={
+        2,
+        8,
+        1,
+        2*service_count,
+        1,
+        blocklen,
+        block_count*16
+    };
+
+
+    uint8_t status=inDataExchange(felica->tg,sendlist,sendlenlist,7,pn532_packetbuffer,&length);
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return status;
+    }
+
+    uint16_t statusflag=pn532_packetbuffer[10];
+    statusflag=(statusflag<<8)+pn532_packetbuffer[11];
     return statusflag;
 }
 
