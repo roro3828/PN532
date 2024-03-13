@@ -214,6 +214,8 @@ public:
     uint32_t readRegister(uint16_t reg);
     uint32_t writeRegister(uint16_t reg, uint8_t val);
 
+    void setParameters(const uint8_t flags);
+
 
     // polling
     /**
@@ -270,6 +272,10 @@ public:
     */
     uint8_t inDataExchange(const uint8_t tg,const uint8_t **sendlist,const uint16_t *sendlenlist,const uint8_t sendcount,uint8_t *response,uint16_t *responselen);
 
+    uint8_t tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen);
+    //tgInitAsTarget(const uint8_t mode,const uint16_t sensres,const uint8_t *nfcid1,const uint8_t selres,const uint8_t *nfcid2,const uint8_t *pad,const uint16_t *systemcode,const uint8_t *nfcid3,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen)
+    uint8_t tgGetData(uint8_t *response,uint16_t *responselen);
+    uint8_t tgSetData(const uint8_t *data,const uint16_t datalen);
     // APDU Commands
     uint16_t readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength);
     uint16_t selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response,uint16_t *responseLength);
@@ -327,7 +333,6 @@ private:
     uint8_t _felicaPMm[8]; // FeliCa PMm (PAD)
 
     uint8_t pn532_packetbuffer[PN532_PACKET_BUF_LEN];
-    uint8_t pn532_padubuffer[PN532_APDU_BUF_LEN];
 
     PN532Interface *_interface;
 };

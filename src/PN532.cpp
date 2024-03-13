@@ -53,6 +53,20 @@ uint32_t PN532::getFirmwareVersion(void){
     return response;
 }
 
+void PN532::setParameters(const uint8_t flags){
+    pn532_packetbuffer[0]=PN532_COMMAND_SETPARAMETERS;
+    pn532_packetbuffer[1]=flags;
+    if(_interface->writeCommand(pn532_packetbuffer,2,NULL,0)){
+        return;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    // read
+    int8_t status=_interface->readResponse(pn532_packetbuffer,&length,1000);
+    if(status<0){
+        return;
+    }
+}
+
 uint8_t PN532::inListPassiveTarget(const uint8_t maxtg,const PN532::Type type,const uint8_t *data,const uint8_t datalen,uint8_t *targetdata,uint8_t *targetdatalen){
     uint8_t fixedtype=type&0x0F;
     pn532_packetbuffer[0] = PN532_COMMAND_INLISTPASSIVETARGET;
@@ -197,6 +211,66 @@ uint8_t PN532::inDataExchange(const uint8_t tg,const uint8_t **sendlist,const ui
 uint8_t PN532::inDataExchange(const uint8_t tg,const uint8_t *send,const uint16_t sendlen,uint8_t *response,uint16_t *responselen){
     const uint8_t *sendlist[]={send};
     return inDataExchange(tg,sendlist,&sendlen,(const uint8_t)1,response,responselen);
+}
+uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen){
+    pn532_packetbuffer[0]=PN532_COMMAND_TGINITASTARGET;
+    pn532_packetbuffer[1]=mode;
+    const uint8_t *sendlist[]={
+        mifareParams,
+        felicaParams,
+        nfcid,
+        &gtlen,
+        gt,
+        &tklen,
+        tk
+    };
+    const uint16_t sendlenlist[]={
+        6,
+        18,
+        10,
+        1,
+        gtlen,
+        1,
+        tklen
+    };
+    if(_interface->writeCommand(pn532_packetbuffer,2,sendlist,sendlenlist,7)){
+        return 0;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    if(_interface->readResponse(pn532_packetbuffer,&length,0)<0){
+        return 0;
+    }
+
+    return pn532_packetbuffer[1];
+}
+uint8_t PN532::tgGetData(uint8_t *response,uint16_t *responselen){
+    *responselen=0;
+    pn532_packetbuffer[0]=PN532_COMMAND_TGGETDATA;
+    if(_interface->writeCommand(pn532_packetbuffer,1,NULL,0)){
+        return 0;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    if(_interface->readResponse(pn532_packetbuffer,&length,0)<0){
+        return 0;
+    }
+    if(pn532_packetbuffer[0]!=0x87){
+        return 0;
+    }
+    uint8_t status=pn532_packetbuffer[1];
+    *responselen=length-2;
+    memmove(response,&pn532_packetbuffer[2],*response);
+    return status;
+}
+uint8_t PN532::tgSetData(const uint8_t *data,const uint16_t datalen){
+    pn532_packetbuffer[0]=PN532_COMMAND_TGSETDATA;
+    if(_interface->writeCommand(pn532_packetbuffer,1,data,datalen)){
+        return 0;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    if(_interface->readResponse(pn532_packetbuffer,&length,0)<0){
+        return 0;
+    }
+    return pn532_packetbuffer[1];
 }
 
 uint16_t PN532::readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength){
