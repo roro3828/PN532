@@ -21,7 +21,7 @@ bool PN532::SAMConfig(){
     if(_interface->writeCommand(pn532_packetbuffer,4,NULL,(uint8_t)0)){
         return false;
     }
-    uint8_t s=PN532_PACKET_BUF_LEN;
+    uint8_t s=5;
     _interface->readResponse(pn532_packetbuffer,&s);
     return 0<s;
 }
@@ -53,18 +53,146 @@ uint32_t PN532::getFirmwareVersion(void){
     return response;
 }
 
-void PN532::setParameters(const uint8_t flags){
+bool PN532::getGeneralStatus(uint8_t *err,uint8_t *field,uint8_t *nbTg,uint8_t targets[][4],uint8_t *SAMstatus){
+    pn532_packetbuffer[0]=PN532_COMMAND_GETGENERALSTATUS;
+    if(_interface->writeCommand(pn532_packetbuffer,1,NULL,0)){
+        return false;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    int8_t status=_interface->readResponse(pn532_packetbuffer,&length,1000);
+    if(status<0){
+        return false;
+    }
+    if(err!=NULL)*err=pn532_packetbuffer[1];
+    if(field!=NULL)*field=pn532_packetbuffer[2];
+    if(nbTg!=NULL)*nbTg=pn532_packetbuffer[3];
+    if(targets!=NULL){
+        for(uint8_t i=0;i<*nbTg;i++){
+            for(uint8_t j=0;j<4;j++){
+                targets[i][j]=pn532_packetbuffer[i*4+j];
+            }
+        }
+    }
+    if(SAMstatus!=NULL)*SAMstatus=pn532_packetbuffer[length-1];
+    return true;
+}
+
+bool PN532::readRegister(const uint16_t *addrlist,const uint8_t addrcount,uint8_t *vallist){
+    pn532_packetbuffer[0]=PN532_COMMAND_READREGISTER;
+    for(uint8_t i=0;i<addrcount;i++){
+        pn532_packetbuffer[1+i*2]=((addrlist[i]>>8)&0xFF);
+        pn532_packetbuffer[1+i*2+1]=(addrlist[i]&0xFF);
+    }
+    if(_interface->writeCommand(pn532_packetbuffer,1,&pn532_packetbuffer[1],2*addrcount)){
+        return false;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    int8_t status=_interface->readResponse(pn532_packetbuffer,&length,1000);
+    if(status<0){
+        return false;
+    }
+    if(pn532_packetbuffer[0]!=(PN532_COMMAND_READREGISTER+1)){
+        return false;
+    }
+    memmove(vallist,&pn532_packetbuffer[1],addrcount);
+    return true;
+}
+bool PN532::readRegister(const uint16_t addr,uint8_t *val){
+    return readRegister(&addr,(uint8_t)1,val);
+}
+
+bool PN532::writeRegister(const uint16_t *addrlist,const uint8_t *vallist,const uint8_t count){
+    pn532_packetbuffer[0]=PN532_COMMAND_WRITEREGISTER;
+
+    for(uint8_t i=0;i<count;i++){
+        pn532_packetbuffer[1+i*3]=((addrlist[i]>>8)&0xFF);
+        pn532_packetbuffer[1+i*3+1]=(addrlist[i]&0xFF);
+        pn532_packetbuffer[1+i*3+2]=vallist[i];
+    }
+
+    if(_interface->writeCommand(pn532_packetbuffer,1,&pn532_packetbuffer[1],count*3)){
+        return false;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    int8_t status=_interface->readResponse(pn532_packetbuffer,&length,1000);
+    if(status<0){
+        return false;
+    }
+    if(pn532_packetbuffer[0]!=(PN532_COMMAND_WRITEREGISTER+1)){
+        return false;
+    }
+    return true;
+}
+bool PN532::writeRegister(const uint16_t addr,const uint8_t val){
+    return writeRegister(&addr,&val,(uint8_t)1);
+}
+
+bool PN532::setParameters(const uint8_t flags){
     pn532_packetbuffer[0]=PN532_COMMAND_SETPARAMETERS;
     pn532_packetbuffer[1]=flags;
     if(_interface->writeCommand(pn532_packetbuffer,2,NULL,0)){
-        return;
+        return false;
     }
     uint16_t length=PN532_PACKET_BUF_LEN;
     // read
     int8_t status=_interface->readResponse(pn532_packetbuffer,&length,1000);
     if(status<0){
-        return;
+        return false;
     }
+    return true;
+}
+
+bool PN532::RFConfiguration(const RFConfigItem configitem,const uint8_t *configdata){
+    pn532_packetbuffer[0]=PN532_COMMAND_RFCONFIGURATION;
+    pn532_packetbuffer[1]=configitem;
+    uint8_t datalength;
+    switch(configitem){
+    case RFConfigItem::RFfield:
+        datalength=1;
+        break;
+    case RFConfigItem::VariousTimings:
+        datalength=3;
+        break;
+    case RFConfigItem::MaxRtyCOM:
+        datalength=1;
+        break;
+    case RFConfigItem::MaxRetries:
+        datalength=3;
+        break;
+    case RFConfigItem::AnalogSettingTypeA:
+        datalength=11;
+        break;
+    case RFConfigItem::AnalogSetting212_424:
+        datalength=8;
+        break;
+    case RFConfigItem::AnalogSettingTypeB:
+        datalength=3;
+        break;
+    case RFConfigItem::AnalogSetting848:
+        datalength=9;
+        break;
+    default:
+        return false;
+    }
+
+    if(_interface->writeCommand(pn532_packetbuffer,2,configdata,datalength)){
+        return false;
+    }
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    // read
+    int8_t status=_interface->readResponse(pn532_packetbuffer,&length,1000);
+    if(status<0){
+        return false;
+    }
+    if(pn532_packetbuffer[0]!=(PN532_COMMAND_RFCONFIGURATION+1)){
+        return false;
+    }
+    return true;
+}
+bool PN532::setRFfield(const bool autoRFCA,const bool RF){
+    uint8_t val=autoRFCA?1:0;
+    val=(val<<1)+(RF?1:0);
+    return RFConfiguration(RFConfigItem::RFfield,&val);
 }
 
 uint8_t PN532::inListPassiveTarget(const uint8_t maxtg,const PN532::Type type,const uint8_t *data,const uint8_t datalen,uint8_t *targetdata,uint8_t *targetdatalen){
@@ -212,7 +340,7 @@ uint8_t PN532::inDataExchange(const uint8_t tg,const uint8_t *send,const uint16_
     const uint8_t *sendlist[]={send};
     return inDataExchange(tg,sendlist,&sendlen,(const uint8_t)1,response,responselen);
 }
-uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen){
+uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen,const uint16_t timeout){
     pn532_packetbuffer[0]=PN532_COMMAND_TGINITASTARGET;
     pn532_packetbuffer[1]=mode;
     const uint8_t *sendlist[]={
@@ -237,11 +365,15 @@ uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,con
         return 0;
     }
     uint16_t length=PN532_PACKET_BUF_LEN;
-    if(_interface->readResponse(pn532_packetbuffer,&length,0)<0){
+    if(_interface->readResponse(pn532_packetbuffer,&length,timeout)<0){
         return 0;
     }
 
     return pn532_packetbuffer[1];
+}
+
+uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen){
+    return tgInitAsTarget(mode,mifareParams,felicaParams,nfcid,gt,gtlen,tk,tklen,0);
 }
 uint8_t PN532::tgGetData(uint8_t *response,uint16_t *responselen){
     *responselen=0;

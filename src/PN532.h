@@ -41,6 +41,16 @@
 #define PN532_RESPONSE_INDATAEXCHANGE       (0x41)
 #define PN532_RESPONSE_INLISTPASSIVETARGET  (0x4B)
 
+// REG CIU
+#define REG_CIU_Mode                        (0x6301) // Defines general modes for transmitting and receiving.
+#define REG_CIU_TxMode                      (0x6302) // Defines the transmission data rate and framing during transmission.
+#define REG_CIU_RxMode                      (0x6303) // Defines the reception data rate and framing during receiving
+#define REG_CIU_TxControl                   (0x6304) // Controls the logical behavior of the antenna driver pins TX1 and TX2.
+#define REG_CIU_TxAuto                      (0x6305) // Controls the setting of the antenna driver
+#define REG_CIU_Command                     (0x6331) // Starts and stops the command execution
+#define REG_CIU_Status2                     (0x6338) // Contain status flags of the receiver, transmitter and Data Mode Detector
+#define REG_CIU_Control                     (0x633C) // Contains miscellaneous control bits
+#define REG_CIU_ManualRCV                   (0x630D) // Allows manual fine tuning of the internal receiver
 
 #define PN532_MIFARE_ISO14443A              (0x00)
 
@@ -211,10 +221,24 @@ public:
      * @returns  The chip's firmware version and ID
     */
     uint32_t getFirmwareVersion();
-    uint32_t readRegister(uint16_t reg);
-    uint32_t writeRegister(uint16_t reg, uint8_t val);
-
-    void setParameters(const uint8_t flags);
+    bool getGeneralStatus(uint8_t *err,uint8_t *field,uint8_t *nbTg,uint8_t targets[][4],uint8_t *SAMstatus);
+    bool readRegister(const uint16_t *addrlist,const uint8_t addrcount,uint8_t *vallist);
+    bool readRegister(const uint16_t addr,uint8_t *val);
+    bool writeRegister(const uint16_t *addrlist,const uint8_t *vallist,const uint8_t count);
+    bool writeRegister(const uint16_t addr,const uint8_t val);
+    bool setParameters(const uint8_t flags);
+    enum RFConfigItem:uint8_t{
+        RFfield                 =0x01,
+        VariousTimings          =0x02,
+        MaxRtyCOM               =0x04,
+        MaxRetries              =0x05,
+        AnalogSettingTypeA      =0x0A,
+        AnalogSetting212_424    =0x0B,
+        AnalogSettingTypeB      =0x0C,
+        AnalogSetting848        =0x0D
+    };
+    bool RFConfiguration(const RFConfigItem configitem,const uint8_t *configdata);
+    bool setRFfield(const bool autoRFCA,const bool RF);
 
 
     // polling
@@ -272,7 +296,9 @@ public:
     */
     uint8_t inDataExchange(const uint8_t tg,const uint8_t **sendlist,const uint16_t *sendlenlist,const uint8_t sendcount,uint8_t *response,uint16_t *responselen);
 
+    
     uint8_t tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen);
+    uint8_t tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen,const uint16_t timeout);
     //tgInitAsTarget(const uint8_t mode,const uint16_t sensres,const uint8_t *nfcid1,const uint8_t selres,const uint8_t *nfcid2,const uint8_t *pad,const uint16_t *systemcode,const uint8_t *nfcid3,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen)
     uint8_t tgGetData(uint8_t *response,uint16_t *responselen);
     uint8_t tgSetData(const uint8_t *data,const uint16_t datalen);

@@ -136,23 +136,29 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
     }
 
     length = read();
-    if((length&0xFFU)==0xFFU){
-        if(0xFFU!=read()){
+    if((length&0xFF)==0xFF){
+        if(0xFF!=read()){
             return PN532_INVALID_FRAME;
         }
         length=read();  // LENM
         length=read()+(length<<8);// LENL
     }
+    DMSG("Length HEX:");
 
     // Checksum of length
     if(0xFF<=length){
-        if((length>>8+length+read())&0xFF!=0){
+        DMSG_HEX(length>>8);
+        DMSG_HEX((length&0xFF));
+        DMSG("\n");
+        if((((length>>8)+length+read())&0xFF)!=0){
             DMSG("LCS is not ok\n");
             return PN532_INVALID_FRAME;
         }
     }
     else{
-        if((length+read())&0xFF!=0){
+        DMSG_HEX((length&0xFF));
+        DMSG("\n");
+        if(((length+read())&0xFF)!=0){
             DMSG("LCS is not ok\n");
             return PN532_INVALID_FRAME;
         }
@@ -170,13 +176,18 @@ int8_t PN532_I2C::readResponse(uint8_t buf[], uint16_t *len, uint16_t timeout){
         DMSG("\n");
         return res;
     }
-    uint16_t length=res&(0xFFFF);
+    uint16_t length=(res&0xFFFF);
     DMSG("receve len: ");
     DMSG(length);
     DMSG("\n");
     if (*len<length){
         DMSG("Response is too big\n");
         return PN532_NO_SPACE; // not enough space
+    }
+
+    if(length==0){
+        read();
+        return 0;
     }
 
     sendNack();
@@ -218,9 +229,9 @@ int8_t PN532_I2C::readResponse(uint8_t buf[], uint16_t *len, uint16_t timeout){
     return 0;
 }
 int8_t PN532_I2C::readResponse(uint8_t buf[], uint8_t *len, uint16_t timeout){
-    uint16_t tmp=*len;
+    uint16_t tmp=(*len);
     int8_t r=readResponse(buf,&tmp,timeout);
-    *len=tmp;
+    *len=(tmp&0xFF);
     return r;
 }
 
