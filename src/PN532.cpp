@@ -420,6 +420,7 @@ uint16_t PN532::readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,co
         pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=(uint8_t)((le>>8)&0xFF);
         pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=(uint8_t)(le&0xFF);
     }
+    *responseLength=0;
     uint16_t length=PN532_PACKET_BUF_LEN;
     uint16_t status=inDataExchange(tg,&pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],cmdsize,pn532_packetbuffer,&length);
     if(status&0b111111!=0){
@@ -429,10 +430,6 @@ uint16_t PN532::readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,co
     status=pn532_packetbuffer[length-2];
     status=(status<<8)+pn532_packetbuffer[length-1];
     if(response==NULL||responseLength==NULL){
-        return status;
-    }
-    if(status!=0x9000){
-        *responseLength=0;
         return status;
     }
     *responseLength=length-2;
@@ -448,12 +445,15 @@ uint16_t PN532::selectFile(const uint8_t tg,const uint16_t selectionControl,cons
     uint16_t length=PN532_PACKET_BUF_LEN;
     const uint8_t *sendlist[]={
         &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],
-        id
+        id,
+        &pn532_zero
     };
     const uint16_t sendlenlist[]={
         5,
-        idlen
+        idlen,
+        1
     };
+    *responseLength=0;
     uint16_t status=inDataExchange(tg,sendlist,sendlenlist,2,pn532_packetbuffer,&length);
     if(status&0b111111!=0){
         DMSG("Error");
@@ -462,10 +462,6 @@ uint16_t PN532::selectFile(const uint8_t tg,const uint16_t selectionControl,cons
     status=pn532_packetbuffer[length-2];
     status=(status<<8)+pn532_packetbuffer[length-1];
     if(response==NULL||responseLength==NULL){
-        return status;
-    }
-    if(status!=0x9000){
-        *responseLength=0;
         return status;
     }
     *responseLength=length-2;
@@ -507,6 +503,29 @@ uint16_t PN532::verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *v
     }
     status=pn532_packetbuffer[length-2];
     status=(status<<8)+pn532_packetbuffer[length-1];
+    return status;
+}
+
+uint16_t PN532::readRecord(const uint8_t tg,const uint8_t recordID,const uint8_t control,const uint8_t readLength,uint8_t *response,uint16_t *responseLength){
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=0x00;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+1]=APDU_CMD_READ_RECORD;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2]=recordID;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+3]=control;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=readLength;
+    *responseLength=0;
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    uint16_t status=inDataExchange(tg,&pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],5,pn532_packetbuffer,&length);
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return (0xFF<<8)|status;
+    }
+    status=pn532_packetbuffer[length-2];
+    status=(status<<8)+pn532_packetbuffer[length-1];
+    if(response==NULL||responseLength==NULL){
+        return status;
+    }
+    *responseLength=length-2;
+    memmove(response,pn532_packetbuffer,length-2);
     return status;
 }
 

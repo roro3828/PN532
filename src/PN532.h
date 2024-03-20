@@ -137,6 +137,7 @@
 #define APDU_CMD_SELECT_FILE                0xA4
 #define APDU_CMD_VERIFY                     0x20
 #define APDU_CMD_VERIFY_SPECIFIC_REFERENCE  0x80
+#define APDU_CMD_READ_RECORD                0xB2
 
 #define APDU_STATUS_SUCCESS                 0x9000
 
@@ -308,6 +309,8 @@ public:
     uint16_t selectDF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
     uint16_t selectEF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
     uint16_t verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen);
+    uint16_t readRecord(const uint8_t tg,const uint8_t recordID,const uint8_t control,const uint8_t readLength,uint8_t *response,uint16_t *responseLength);
+
 
     // felica commands
     bool felica_requestService(const PICC::Felica *felica,const uint8_t node_count,const uint16_t *nodecode_list,uint16_t *response,uint8_t *responseLength);
@@ -357,6 +360,8 @@ private:
     uint8_t inListedTag; // Tg number of inlisted tag.
     uint8_t _felicaIDm[8]; // FeliCa IDm (NFCID2)
     uint8_t _felicaPMm[8]; // FeliCa PMm (PAD)
+
+    uint8_t pn532_zero=0;
 
     uint8_t pn532_packetbuffer[PN532_PACKET_BUF_LEN];
 
