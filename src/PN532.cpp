@@ -420,7 +420,7 @@ uint16_t PN532::readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,co
         pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=(uint8_t)((le>>8)&0xFF);
         pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=(uint8_t)(le&0xFF);
     }
-    *responseLength=0;
+    if(responseLength!=NULL)*responseLength=0;
     uint16_t length=PN532_PACKET_BUF_LEN;
     uint16_t status=inDataExchange(tg,&pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],cmdsize,pn532_packetbuffer,&length);
     if(status&0b111111!=0){
@@ -453,7 +453,7 @@ uint16_t PN532::selectFile(const uint8_t tg,const uint16_t selectionControl,cons
         idlen,
         1
     };
-    *responseLength=0;
+    if(responseLength!=NULL)*responseLength=0;
     uint16_t status=inDataExchange(tg,sendlist,sendlenlist,2,pn532_packetbuffer,&length);
     if(status&0b111111!=0){
         DMSG("Error");
@@ -512,7 +512,7 @@ uint16_t PN532::readRecord(const uint8_t tg,const uint8_t recordID,const uint8_t
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2]=recordID;
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+3]=control;
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+4]=readLength;
-    *responseLength=0;
+    if(responseLength!=NULL)*responseLength=0;
     uint16_t length=PN532_PACKET_BUF_LEN;
     uint16_t status=inDataExchange(tg,&pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],5,pn532_packetbuffer,&length);
     if(status&0b111111!=0){
