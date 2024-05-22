@@ -165,17 +165,27 @@ public:
     };
     // card data
     class PICC{
+        private:
+        struct base{
+            uint8_t tg;
+            PN532 *pcd;
+        };
         public:
+        struct Test:base{
+            uint8_t uid[8];
+        };
         struct TypeA{
             uint8_t tg;
             uint8_t uid[10];
             uint8_t uidlen;
+            PN532 *pcd;
         };
         struct TypeB{
             uint8_t tg;
             uint8_t pupi[4];
             uint8_t ap[4];
             uint8_t prot[3];
+            PN532 *pcd;
         };
         struct Felica{
             uint8_t tg;
@@ -282,9 +292,10 @@ public:
      * @param[in] sendlen
      * @param[out] response
      * @param[out] responselen
+     * @param[in] timeout ms
      * @return Status code
     */
-    uint8_t inDataExchange(const uint8_t tg,const uint8_t *send,const uint16_t sendlen,uint8_t *response,uint16_t *responselen);
+    uint8_t inDataExchange(const uint8_t tg,const uint8_t *send,const uint16_t sendlen,uint8_t *response,uint16_t *responselen,uint16_t timeout=1000U);
     /**
      * @brief This command is used to support protocol data exchanges between the PN532 as initiator and a target. 
      * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
@@ -293,9 +304,10 @@ public:
      * @param[in] sendcount Number of data list
      * @param[out] response
      * @param[out] responselen
+     * @param[in] timeout ms
      * @return Status code
     */
-    uint8_t inDataExchange(const uint8_t tg,const uint8_t **sendlist,const uint16_t *sendlenlist,const uint8_t sendcount,uint8_t *response,uint16_t *responselen);
+    uint8_t inDataExchange(const uint8_t tg,const uint8_t **sendlist,const uint16_t *sendlenlist,const uint8_t sendcount,uint8_t *response,uint16_t *responselen,uint16_t timeout=1000U);
 
     
     uint8_t tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen);
@@ -304,8 +316,27 @@ public:
     uint8_t tgGetData(uint8_t *response,uint16_t *responselen);
     uint8_t tgSetData(const uint8_t *data,const uint16_t datalen);
     // APDU Commands
+    /**
+     * @brief Send APDU Command to target
+     * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
+     * @param[in] CLA Command Class
+     * @param[in] INS Command code
+     * @param[in] P1 Arg1
+     * @param[in] P2 Arg2
+     * @param[in] data
+     * @param[in] datalen
+     * @param[out] response
+     * @param[out] responseLength
+     * @param[in] le expected response length.
+     * @param[in] timeout timeout ms
+     * @return Status code
+    */
+    uint16_t SendAPDU(const uint8_t tg,const uint8_t CLA,const uint8_t INS,const uint8_t P1,const uint8_t P2,const uint8_t *data,const uint16_t dataLength,uint8_t *response,uint16_t *responseLength,uint16_t le=0,uint16_t timeout=1000U);
+
+
     uint16_t readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength);
-    uint16_t selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response,uint16_t *responseLength);
+    uint16_t selectMF(const uint8_t tg,const uint16_t selectionControl,uint8_t *response=NULL,uint16_t *responseLength=NULL);
+    uint16_t selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response=NULL,uint16_t *responseLength=NULL);
     uint16_t selectDF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
     uint16_t selectEF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
     uint16_t verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen);

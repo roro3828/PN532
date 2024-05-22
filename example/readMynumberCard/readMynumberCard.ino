@@ -32,8 +32,6 @@ void loop()
     uint8_t buf[1024];
     uint8_t size;
     PN532::PICC::TypeB typeb;
-    PN532::PICC::TypeA typea[2];
-    PN532::PICC::Felica felica[2];
     int t=nfc.PollingTypeB(1,0x00,&typeb);
     //int t=nfc.PollingTypeA(2,NULL,0,typea);
     //int t=nfc.PollingFelica(2,0x03,0x01,0,felica);
