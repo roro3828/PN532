@@ -1,4 +1,3 @@
-#include "Arduino.h"
 #include "PN532.h"
 #include "PN532_debug.h"
 #include <string.h>
@@ -408,7 +407,7 @@ uint8_t PN532::tgSetData(const uint8_t *data,const uint16_t datalen){
 }
 
 
-uint16_t PN532::SendAPDU(const uint8_t tg,const uint8_t CLA,const uint8_t INS,const uint8_t P1,const uint8_t P2,const uint8_t *data,const uint16_t dataLength,uint8_t *response,uint16_t *responseLength,uint16_t le,uint16_t timeout){
+uint16_t PN532::sendAPDU(const uint8_t tg,const uint8_t CLA,const uint8_t INS,const uint8_t P1,const uint8_t P2,const uint8_t *data,const uint16_t dataLength,uint8_t *response,uint16_t *responseLength,uint16_t le,uint16_t timeout){
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=CLA;
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+1]=INS;
     pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+2]=P1;
@@ -476,31 +475,6 @@ uint16_t PN532::SendAPDU(const uint8_t tg,const uint8_t CLA,const uint8_t INS,co
     *responseLength=length-2;
     memmove(response,pn532_packetbuffer,length-2);
     return status;
-}
-
-
-
-uint16_t PN532::readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength){
-    return SendAPDU(tg,0x00,APDU_CMD_READ_BINARY,p1,p2,NULL,0,response,responseLength);
-}
-uint16_t PN532::selectMF(const uint8_t tg,const uint16_t selectionControl,uint8_t *response,uint16_t *responseLength){
-    return SendAPDU(tg,0x00,APDU_CMD_SELECT_FILE,(uint8_t)((selectionControl>>8)&0xFF),(uint8_t)(selectionControl&0xFF),NULL,0,response,responseLength);
-}
-uint16_t PN532::selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response,uint16_t *responseLength){
-    return SendAPDU(tg,0x00,APDU_CMD_SELECT_FILE,(uint8_t)((selectionControl>>8)&0xFF),(uint8_t)(selectionControl&0xFF),id,idlen,response,responseLength);
-}
-uint16_t PN532::selectDF(const uint8_t tg,const uint8_t *id,const uint8_t idlen){
-    return selectFile(tg,0x040C,id,idlen,NULL,NULL);
-}
-uint16_t PN532::selectEF(const uint8_t tg,const uint8_t *id,const uint8_t idlen){
-    return selectFile(tg,0x020C,id,idlen,NULL,NULL);
-}
-uint16_t PN532::verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen){
-    return SendAPDU(tg,0x00,APDU_CMD_VERIFY,0x00,qualifier,verificationdata,datalen,NULL,NULL);
-}
-
-uint16_t PN532::readRecord(const uint8_t tg,const uint8_t recordID,const uint8_t control,const uint8_t readLength,uint8_t *response,uint16_t *responseLength){
-    return SendAPDU(tg,0x00,APDU_CMD_READ_RECORD,recordID,control,NULL,0,response,responseLength,readLength);
 }
 
 bool PN532::felica_requestService(const PICC::Felica *felica,const uint8_t node_count,const uint16_t *nodecode_list,uint16_t *response,uint8_t *responseLength){
@@ -641,6 +615,31 @@ uint16_t PN532::felica_writeWithoutEncryption(const PICC::Felica *felica,const u
     uint16_t statusflag=pn532_packetbuffer[10];
     statusflag=(statusflag<<8)+pn532_packetbuffer[11];
     return statusflag;
+}
+
+uint16_t PN532::PICC::picc::sendAPDU(const uint8_t CLA,const uint8_t INS,const uint8_t P1,const uint8_t P2,const uint8_t *data,const uint16_t dataLength,uint8_t *response,uint16_t *responseLength,uint16_t le,uint16_t timeout){
+    return this->pcd->sendAPDU(this->tg,CLA,INS,P1,P2,data,dataLength,response,responseLength,le,timeout);
+}
+uint16_t PN532::PICC::picc::readBinary(const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength){
+    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_READ_BINARY,p1,p2,NULL,0,response,responseLength);
+}
+uint16_t PN532::PICC::picc::selectMF(const uint16_t selectionControl,uint8_t *response,uint16_t *responseLength){
+    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_SELECT_FILE,(uint8_t)((selectionControl>>8)&0xFF),(uint8_t)(selectionControl&0xFF),NULL,0,response,responseLength);
+}
+uint16_t PN532::PICC::picc::selectFile(const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response,uint16_t *responseLength){
+    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_SELECT_FILE,(uint8_t)((selectionControl>>8)&0xFF),(uint8_t)(selectionControl&0xFF),id,idlen,response,responseLength);
+}
+uint16_t PN532::PICC::picc::selectDF(const uint8_t *id,const uint8_t idlen){
+    return this->selectFile(0x040C,id,idlen,NULL,NULL);
+}
+uint16_t PN532::PICC::picc::selectEF(const uint8_t *id,const uint8_t idlen){
+    return this->selectFile(0x020C,id,idlen,NULL,NULL);
+}
+uint16_t PN532::PICC::picc::verify(const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen){
+    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_VERIFY,0x00,qualifier,verificationdata,datalen,NULL,NULL);
+}
+uint16_t PN532::PICC::picc::readRecord(const uint8_t recordID,const uint8_t control,const uint8_t readLength,uint8_t *response,uint16_t *responseLength){
+    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_READ_RECORD,recordID,control,NULL,0,response,responseLength,readLength);
 }
 
 uint16_t PN532::PICC::Felica::readWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count){

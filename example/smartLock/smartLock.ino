@@ -42,7 +42,7 @@ void loop()
     Serial.print("\n");
     uint8_t type=0x00;
 
-    if(nfc.selectDF(typea.tg,(const uint8_t[]){0xF0,0x49,0x30,0x47,0x69,0x50,0x29,0x47},8)==APDU_STATUS_SUCCESS){
+    if(typea.selectDF((const uint8_t[]){0xF0,0x49,0x30,0x47,0x69,0x50,0x29,0x47},8)==APDU_STATUS_SUCCESS){
         Serial.printf("Success\n");
     }
 
@@ -51,7 +51,7 @@ void loop()
     buf[2]=0xb9;
     buf[3]=0x1c;
 
-    Serial.printf("%02X\n",nfc.SendAPDU(typea.tg,0x66,0x01,0x12,0x34,buf,4,buf,&size));
+    Serial.printf("%02X\n",typea.sendAPDU(0x66,0x01,0x12,0x34,buf,4,buf,&size));
 
     for(int i=0;i<size;i++){
         Serial.printf("%02X ",buf[i]);

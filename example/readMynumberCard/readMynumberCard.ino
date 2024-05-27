@@ -33,8 +33,6 @@ void loop()
     uint8_t size;
     PN532::PICC::TypeB typeb;
     int t=nfc.PollingTypeB(1,0x00,&typeb);
-    //int t=nfc.PollingTypeA(2,NULL,0,typea);
-    //int t=nfc.PollingFelica(2,0x03,0x01,0,felica);
     if(t==0){
         return;
     }
@@ -47,7 +45,7 @@ void loop()
 
     Serial.print("\nType B found\n");
     //if(!readMynumber((uint8_t*)pin)){
-    if(!pinStatus()){
+    if(!pinStatus(&typeb)){
         Serial.print("\nReadFaild\n");
         delay(100);
     }
@@ -55,8 +53,8 @@ void loop()
         delay(1000);
     }
 }
-int8_t lookupPIN(){
-    uint16_t status=nfc.verify(0x01,0x80,NULL,0);
+int8_t lookupPIN(PN532::PICC::TypeB *picc){
+    uint16_t status=picc->verify(0x80,NULL,0);
     if(((status>>8)&0xFF)==0x63U){
         return (int8_t)(status&0x0F);
     }
@@ -64,50 +62,50 @@ int8_t lookupPIN(){
         return -1;
     }
 }
-bool pinStatus(){
+bool pinStatus(PN532::PICC::TypeB *picc){
     Serial.print("Reading...\n");
     // SELECT 入力補助AP
-    if(nfc.selectDF(0x01,(const uint8_t[]){0xD3,0x92,0x10,0x00,0x31,0x00,0x01,0x01,0x04,0x08},10)!=APDU_STATUS_SUCCESS){
+    if(picc->selectDF((const uint8_t[]){0xD3,0x92,0x10,0x00,0x31,0x00,0x01,0x01,0x04,0x08},10)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x11},2)!=APDU_STATUS_SUCCESS){
+    if(picc->selectEF((const uint8_t[]){0x00,0x11},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    int8_t N=lookupPIN();
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x14},2)!=APDU_STATUS_SUCCESS){
+    int8_t N=lookupPIN(picc);
+    if(picc->selectEF((const uint8_t[]){0x00,0x14},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    int8_t NA=lookupPIN();
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x15},2)!=APDU_STATUS_SUCCESS){
+    int8_t NA=lookupPIN(picc);
+    if(picc->selectEF((const uint8_t[]){0x00,0x15},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    int8_t NB=lookupPIN();
+    int8_t NB=lookupPIN(picc);
 
     // SELECT 券面事項AP
-    if(nfc.selectDF(0x01,(const uint8_t[]){0xD3,0x92,0x10,0x00,0x31,0x00,0x01,0x01,0x04,0x02},10)!=APDU_STATUS_SUCCESS){
+    if(picc->selectDF((const uint8_t[]){0xD3,0x92,0x10,0x00,0x31,0x00,0x01,0x01,0x04,0x02},10)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x13},2)!=APDU_STATUS_SUCCESS){
+    if(picc->selectEF((const uint8_t[]){0x00,0x13},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    int8_t KA=lookupPIN();
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x12},2)!=APDU_STATUS_SUCCESS){
+    int8_t KA=lookupPIN(picc);
+    if(picc->selectEF((const uint8_t[]){0x00,0x12},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    int8_t KB=lookupPIN();
+    int8_t KB=lookupPIN(picc);
 
     // SELECT JPKIAP
-    if(nfc.selectDF(0x01,(const uint8_t[]){0xD3,0x92,0xF0,0x00,0x26,0x01,0x00,0x00,0x00,0x01},10)!=APDU_STATUS_SUCCESS){
+    if(picc->selectDF((const uint8_t[]){0xD3,0x92,0xF0,0x00,0x26,0x01,0x00,0x00,0x00,0x01},10)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x18},2)!=APDU_STATUS_SUCCESS){
+    if(picc->selectEF((const uint8_t[]){0x00,0x18},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    int8_t JPKIA=lookupPIN();
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x1B},2)!=APDU_STATUS_SUCCESS){
+    int8_t JPKIA=lookupPIN(picc);
+    if(picc->selectEF((const uint8_t[]){0x00,0x1B},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
-    int8_t JPKIS=lookupPIN();
+    int8_t JPKIS=lookupPIN(picc);
 
     //*/
     Serial.printf("N    :%2d\nNA   :%2d\nNB   :%2d\nKA   :%2d\nKB   :%2d\nJPKIA:%2d\nJPKIS:%2d\n",
@@ -122,31 +120,31 @@ bool pinStatus(){
 
     return true;
 }
-bool readMynumber(uint8_t *pin){
+bool readMynumber(PN532::PICC::TypeB *picc,uint8_t *pin){
     uint8_t buf[512];
     uint16_t size;
 
     // SELECT 補助AP
-    if(nfc.selectDF(0x01,(const uint8_t[]){0xD3,0x92,0x10,0x00,0x31,0x00,0x01,0x01,0x04,0x08},10)!=APDU_STATUS_SUCCESS){
+    if(picc->selectDF((const uint8_t[]){0xD3,0x92,0x10,0x00,0x31,0x00,0x01,0x01,0x04,0x08},10)!=APDU_STATUS_SUCCESS){
         return false;
     }
     // SELECT 暗証番号
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x11},2)!=APDU_STATUS_SUCCESS){
+    if(picc->selectEF((const uint8_t[]){0x00,0x11},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
     // VERIFY
-    if(nfc.verify(0x01,APDU_CMD_VERIFY_SPECIFIC_REFERENCE,pin,4)!=APDU_STATUS_SUCCESS){
+    if(picc->verify(APDU_CMD_VERIFY_SPECIFIC_REFERENCE,pin,4)!=APDU_STATUS_SUCCESS){
         Serial.println("Verify failed");
         Serial.print("Left count:");
-        Serial.println(lookupPIN());
+        Serial.println(lookupPIN(picc));
         return false;
     }
     // SELECT マイナンバー
-    if(nfc.selectEF(0x01,(const uint8_t[]){0x00,0x01},2)!=APDU_STATUS_SUCCESS){
+    if(picc->selectEF((const uint8_t[]){0x00,0x01},2)!=APDU_STATUS_SUCCESS){
         return false;
     }
     // READ
-    if(nfc.readBinary(0x01,0,0,0,buf,&size)!=APDU_STATUS_SUCCESS){
+    if(picc->readBinary(0,0,0,buf,&size)!=APDU_STATUS_SUCCESS){
         return false;
     }
     buf[15]='\0';

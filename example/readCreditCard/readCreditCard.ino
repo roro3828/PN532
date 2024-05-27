@@ -41,8 +41,8 @@ void loop()
     }
     Serial.print("\n");
     uint8_t type=0x00;
-    if(nfc.selectFile(0x01,0x0400,(uint8_t*)"1PAY.SYS.DDF01",14,buf,&size)!=APDU_STATUS_SUCCESS){
-        if(nfc.selectFile(0x01,0x0400,(uint8_t*)"2PAY.SYS.DDF01",14,buf,&size)!=APDU_STATUS_SUCCESS){
+    if(typea.selectFile(0x0400,(uint8_t*)"1PAY.SYS.DDF01",14,buf,&size)!=APDU_STATUS_SUCCESS){
+        if(typea.selectFile(0x0400,(uint8_t*)"2PAY.SYS.DDF01",14,buf,&size)!=APDU_STATUS_SUCCESS){
             Serial.println("This card is not supported.");
             return;
         }
@@ -64,7 +64,7 @@ void loop()
                 break;
             }
         }
-        if(nfc.selectFile(typea.tg,0x0400,aid,aidlen,buf,&size)!=0x9000){
+        if(typea.selectFile(0x0400,aid,aidlen,buf,&size)!=0x9000){
             return;
         }
 

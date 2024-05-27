@@ -2,6 +2,7 @@
 #define __PN532_H__
 
 #include <stdint.h>
+#include <cstddef>
 #include "PN532Interface.h"
 
 // PN532 Commands
@@ -166,26 +167,44 @@ public:
     // card data
     class PICC{
         private:
-        struct base{
+        struct picc{
             uint8_t tg;
             PN532 *pcd;
+
+            /**
+             * @brief Send APDU Command to target
+             * @param[in] CLA Command Class
+             * @param[in] INS Command Code
+             * @param[in] P1 Arg1
+             * @param[in] P2 Arg2
+             * @param[in] data
+             * @param[in] datalen
+             * @param[out] response
+             * @param[out] responseLength
+             * @param[in] le expected response length.
+             * @param[in] timeout timeout ms
+             * @return Status code
+            */
+            uint16_t sendAPDU(const uint8_t CLA,const uint8_t INS,const uint8_t P1,const uint8_t P2,const uint8_t *data,const uint16_t dataLength,uint8_t *response,uint16_t *responseLength,uint16_t le=0,uint16_t timeout=1000U);
+
+            
+            uint16_t readBinary(const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength);
+            uint16_t selectMF(const uint16_t selectionControl,uint8_t *response=NULL,uint16_t *responseLength=NULL);
+            uint16_t selectFile(const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response=NULL,uint16_t *responseLength=NULL);
+            uint16_t selectDF(const uint8_t *id,const uint8_t idlen);
+            uint16_t selectEF(const uint8_t *id,const uint8_t idlen);
+            uint16_t verify(const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen);
+            uint16_t readRecord(const uint8_t recordID,const uint8_t control,const uint8_t readLength,uint8_t *response,uint16_t *responseLength);
         };
         public:
-        struct Test:base{
-            uint8_t uid[8];
-        };
-        struct TypeA{
-            uint8_t tg;
+        struct TypeA:picc{
             uint8_t uid[10];
             uint8_t uidlen;
-            PN532 *pcd;
         };
-        struct TypeB{
-            uint8_t tg;
+        struct TypeB:picc{
             uint8_t pupi[4];
             uint8_t ap[4];
             uint8_t prot[3];
-            PN532 *pcd;
         };
         struct Felica{
             uint8_t tg;
@@ -320,7 +339,7 @@ public:
      * @brief Send APDU Command to target
      * @param[in] tg A byte containing the logical number of the relevant target. see 7.4.5 https://www.nxp.com/docs/en/user-guide/141520.pdf
      * @param[in] CLA Command Class
-     * @param[in] INS Command code
+     * @param[in] INS Command Code
      * @param[in] P1 Arg1
      * @param[in] P2 Arg2
      * @param[in] data
@@ -331,16 +350,7 @@ public:
      * @param[in] timeout timeout ms
      * @return Status code
     */
-    uint16_t SendAPDU(const uint8_t tg,const uint8_t CLA,const uint8_t INS,const uint8_t P1,const uint8_t P2,const uint8_t *data,const uint16_t dataLength,uint8_t *response,uint16_t *responseLength,uint16_t le=0,uint16_t timeout=1000U);
-
-
-    uint16_t readBinary(const uint8_t tg,const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength);
-    uint16_t selectMF(const uint8_t tg,const uint16_t selectionControl,uint8_t *response=NULL,uint16_t *responseLength=NULL);
-    uint16_t selectFile(const uint8_t tg,const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response=NULL,uint16_t *responseLength=NULL);
-    uint16_t selectDF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
-    uint16_t selectEF(const uint8_t tg,const uint8_t *id,const uint8_t idlen);
-    uint16_t verify(const uint8_t tg,const uint8_t qualifier,const uint8_t *verificationdata,const uint8_t datalen);
-    uint16_t readRecord(const uint8_t tg,const uint8_t recordID,const uint8_t control,const uint8_t readLength,uint8_t *response,uint16_t *responseLength);
+    uint16_t sendAPDU(const uint8_t tg,const uint8_t CLA,const uint8_t INS,const uint8_t P1,const uint8_t P2,const uint8_t *data,const uint16_t dataLength,uint8_t *response,uint16_t *responseLength,uint16_t le=0,uint16_t timeout=1000U);
 
 
     // felica commands

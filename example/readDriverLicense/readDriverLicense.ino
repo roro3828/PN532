@@ -45,7 +45,7 @@ void loop()
 
     Serial.print("\nType B found\n");
     //if(!readMynumber((uint8_t*)pin)){
-    if(!readDriver()){
+    if(!readDriver(&typeb)){
         Serial.print("\nReadFaild\n");
         delay(100);
     }
@@ -53,25 +53,25 @@ void loop()
         delay(1000);
     }
 }
-bool readDriver(){
+bool readDriver(PN532::PICC::TypeB *picc){
     uint8_t buf[128];
     uint16_t len;
     uint16_t status;
 
 
-    status=nfc.selectMF(0x01,0,buf,&len);
+    status=picc->selectMF(0,buf,&len);
     Serial.printf("SelectMF %04X\n",status);
     if(status!=0x9000){
         return false;
     }
 
-    status=nfc.selectEF(0x01,(const uint8_t[]){0x2F,0x01},2);
+    status=picc->selectEF((const uint8_t[]){0x2F,0x01},2);
     Serial.printf("SelectEF %04X\n",status);
     if(status!=0x9000){
         return false;
     }
 
-    status=nfc.readBinary(0x01,0x00,0x05,0x08,buf,&len);
+    status=picc->readBinary(0x00,0x05,0x08,buf,&len);
     Serial.printf("ReadBin %04X\n",status);
     if(status!=0x9000){
         return false;
