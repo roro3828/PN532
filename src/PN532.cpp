@@ -621,10 +621,10 @@ uint16_t PN532::PICC::picc::sendAPDU(const uint8_t CLA,const uint8_t INS,const u
     return this->pcd->sendAPDU(this->tg,CLA,INS,P1,P2,data,dataLength,response,responseLength,le,timeout);
 }
 uint16_t PN532::PICC::picc::readBinary(const uint8_t p1,const uint8_t p2,const uint16_t le,uint8_t *response,uint16_t *responseLength){
-    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_READ_BINARY,p1,p2,NULL,0,response,responseLength);
+    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_READ_BINARY,p1,p2,NULL,0,response,responseLength,le);
 }
-uint16_t PN532::PICC::picc::selectMF(const uint16_t selectionControl,uint8_t *response,uint16_t *responseLength){
-    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_SELECT_FILE,(uint8_t)((selectionControl>>8)&0xFF),(uint8_t)(selectionControl&0xFF),NULL,0,response,responseLength);
+uint16_t PN532::PICC::picc::selectMF(const uint16_t selectionControl){
+    return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_SELECT_FILE,(uint8_t)((selectionControl>>8)&0xFF),(uint8_t)(selectionControl&0xFF),NULL,0,NULL,NULL);
 }
 uint16_t PN532::PICC::picc::selectFile(const uint16_t selectionControl,const uint8_t *id,const uint8_t idlen,uint8_t *response,uint16_t *responseLength){
     return this->pcd->sendAPDU(this->tg,0x00,APDU_CMD_SELECT_FILE,(uint8_t)((selectionControl>>8)&0xFF),(uint8_t)(selectionControl&0xFF),id,idlen,response,responseLength);

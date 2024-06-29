@@ -138,7 +138,7 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
     length = read();
     if((length&0xFF)==0xFF){
         if(0xFF!=read()){
-            return PN532_INVALID_FRAME;
+            return PN532_INVALID_FRAME_LEN;
         }
         length=read();  // LENM
         length=read()+(length<<8);// LENL
@@ -152,7 +152,7 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
         DMSG("\n");
         if((((length>>8)+length+read())&0xFF)!=0){
             DMSG("LCS is not ok\n");
-            return PN532_INVALID_FRAME;
+            return PN532_INVALID_FRAME_LCS;
         }
     }
     else{
@@ -160,7 +160,7 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
         DMSG("\n");
         if(((length+read())&0xFF)!=0){
             DMSG("LCS is not ok\n");
-            return PN532_INVALID_FRAME;
+            return PN532_INVALID_FRAME_LCS;
         }
     }
 
@@ -169,7 +169,7 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
     return (int32_t)length;
 }
 int8_t PN532_I2C::readResponse(uint8_t buf[], uint16_t *len, uint16_t timeout){
-    int32_t res=getResponseLength(8,timeout);
+    int32_t res=getResponseLength(9,timeout);
     if(res<0){
         DMSG("faild to get len:");
         DMSG(res);
@@ -211,7 +211,7 @@ int8_t PN532_I2C::readResponse(uint8_t buf[], uint16_t *len, uint16_t timeout){
     DMSG("read:  ");
 
     uint8_t sum = PN532_PN532TOHOST;
-    for (uint8_t i = 0; i < length; i++){
+    for (uint16_t i = 0; i < length; i++){
         buf[i] = read();
         sum += buf[i];
 

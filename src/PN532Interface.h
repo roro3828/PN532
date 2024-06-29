@@ -19,6 +19,8 @@
 #define PN532_INVALID_FRAME         (-3)
 #define PN532_NO_SPACE              (-4)
 #define PN532_EXCESS_DATA_MAX_LEN   (-5)
+#define PN532_INVALID_FRAME_LCS     (-6)
+#define PN532_INVALID_FRAME_LEN     (-7)
 
 #define REVERSE_BITS_ORDER(b)       b = (b & 0xF0) >> 4 | (b & 0x0F) << 4; \
                                     b = (b & 0xCC) >> 2 | (b & 0x33) << 2; \
