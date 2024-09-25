@@ -28,8 +28,6 @@ void setup()
 }
 void loop()
 {
-    uint8_t buf[1024];
-    uint16_t size;
     PN532::PICC::TypeA typea;
     int t=nfc.PollingTypeA(2,NULL,0,&typea);
     if(t==0){
@@ -40,9 +38,12 @@ void loop()
         Serial.printf("%02X ",typea.uid[i]);
     }
     Serial.print("\n");
+
+    uint8_t fci[256];
+    uint16_t fcilen;
     uint8_t type=0x00;
-    if(typea.selectFile(0x0400,(uint8_t*)"1PAY.SYS.DDF01",14,buf,&size)!=APDU_STATUS_SUCCESS){
-        if(typea.selectFile(0x0400,(uint8_t*)"2PAY.SYS.DDF01",14,buf,&size)!=APDU_STATUS_SUCCESS){
+    if(typea.selectFile(0x0400,(uint8_t*)"1PAY.SYS.DDF01",14,fci,&fcilen)!=APDU_STATUS_SUCCESS){
+        if(typea.selectFile(0x0400,(uint8_t*)"2PAY.SYS.DDF01",14,fci,&fcilen)!=APDU_STATUS_SUCCESS){
             Serial.println("This card is not supported.");
             return;
         }
@@ -54,62 +55,43 @@ void loop()
         type=1;
     }
 
+    Serial.printf("Type:%d\n",type);
+    for(int i=0;i<fcilen;i++){
+        Serial.printf("%02X ",fci[i]);
+    }
+    Serial.print("\n");
+
     if(type==2){
+        uint8_t *dfname;
+        uint8_t dflen;
+        for(int i=0;i<fcilen;i++){
+            if(fci[i]==0x84){
+                dfname=&fci[i+2];
+                dflen=fci[i+1];
+                break;
+            }
+        }
+
+
         uint8_t *aid;
         uint8_t aidlen;
-        for(int i=0;i<size;i++){
-            if(buf[i]==0x4f){
-                aid=&buf[i+2];
-                aidlen=buf[i+1];
+        for(int i=0;i<fcilen;i++){
+            if(fci[i]==0x4f){
+                aid=&fci[i+2];
+                aidlen=fci[i+1];
                 break;
             }
         }
-        if(typea.selectFile(0x0400,aid,aidlen,buf,&size)!=0x9000){
+        if(typea.selectFile(0x0400,aid,aidlen,buf,&size)!=APDU_STATUS_SUCCESS){
             return;
         }
-
-        uint8_t gpo[]={
-            0x80,0xA8,
-            0x00,0x00,
-            0x23,
-            0x83,
-            0x21,
-            0x28,0x00,0x00,0x00,
-            0x00,0x00,0x00,0x00,0x10,0x00,
-            0x00,0x00,0x00,0x00,0x00,0x00,
-            0x03,0x92,
-            0x00,0x00,0x00,0x00,0x00,
-            0x03,0x92,
-            0x24,0x03,0x20,
-            0x00,
-            0x38,0x39,0x30,0x31,
-            0x00};
-        if(nfc.inDataExchange(typea.tg,gpo,41,buf,&size)!=0x0000){
-            return;
-        }
-        uint8_t cardnumber[16];
-        uint8_t yy;
-        uint8_t mm;
-        for(int i=0;i<size;i++){
-            if(buf[i]==0x57){
-                for(int j=0;j<8;j++){
-                    cardnumber[j*2]=(buf[i+2+j]>>4)&0x0F;
-                    cardnumber[j*2+1]=(buf[i+2+j]&0x0F);
-                }
-
-                yy=((buf[i+10]&0x0F)*10)+((buf[i+11]>>4)&0x0F);
-                mm=((buf[i+11]&0x0F)*10)+((buf[i+12]>>4)&0x0F);
-
-                break;
-            }
-        }
-
-        for(int i=0;i<16;i++){
-            Serial.printf("%hhu",cardnumber[i]);
-        }
-        Serial.printf("\nYY:%02hhu\nMM:%02hhu\n",yy,mm);
+for(int i=0;i<size;i++){
+        Serial.printf("%02X ",buf[i]);
+    }
+    Serial.print("\n");
     }
 
     Serial.printf("\n");
+
     delay(1000);
 }

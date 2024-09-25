@@ -25,12 +25,13 @@ void setup()
     Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
 
     delay(1000);
+    
     nfc.SAMConfig();
 }
 void loop()
 {
-    nfc.writeRegister(REG_CIU_RxMode,0x80);
-    nfc.writeRegister(REG_CIU_TxMode,0x80);
+    nfc.writeRegister(REG_CIU_RxMode,0);
+    nfc.writeRegister(REG_CIU_TxMode,0);
     nfc.setRFfield(false,false);
 
     uint8_t prev;
@@ -46,21 +47,28 @@ void loop()
     prev = bitSet(prev, 2); // enable InitialRFOn
     nfc.writeRegister(REG_CIU_TxAuto, prev);
 
-    nfc.setParameters(0x00); // enable fAutomaticRATS
+    nfc.setParameters(0b00100100); // enable fAutomaticRATS
+    //*/
 
 
     uint8_t buf[128];
     uint16_t size;
     Serial.println("tgInit");
-    uint8_t mode=nfc.tgInitAsTarget(1,
-    (const uint8_t[]){0x40,0x00,0x12,0x34,0x56,0x00},
-    (const uint8_t[]){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
-    (const uint8_t[]){0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00},
+    uint8_t mode=nfc.tgInitAsTarget(0b101,
+    (const uint8_t[]){0x04,0x00,0x12,0x34,0x56,0x40},
+    (const uint8_t[]){0x01,0x12,0x03,0x12,0xEC,0x1F,0x88,0x00,0x05,0x31,0x43,0x45,0x46,0x82,0xB7,0xFF,0x00,0x03},
+    (const uint8_t[]){0x01,0x12,0x03,0x12,0xEC,0x1F,0x88,0x00,0x00,0x00},
     NULL,0,
-    NULL,0
+    NULL,0,
+    buf,&size
     );
+    Serial.printf("Mode%02X\n",mode);
+    Serial.printf("Initiator:");
+    for(int i=0;i<size;i++){
+        Serial.printf("%1X ",buf[i]);
+    }
+    Serial.printf("\n");
     uint16_t status=nfc.tgGetData(buf,&size);
-    Serial.printf("Mode%04X\n",mode);
     Serial.printf("Status:%04X\n",status);
     Serial.print("-->");
     for(int i=0;i<size;i++){

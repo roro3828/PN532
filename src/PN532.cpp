@@ -9,6 +9,26 @@ PN532::PN532(PN532Interface &interface)
     _interface = &interface;
 }
 
+bool PN532::Diagnose(const uint8_t NumTst,const uint8_t *InParam,const uint8_t InParamSize,uint8_t *OutParam,uint16_t timeout){
+    pn532_packetbuffer[0] = PN532_COMMAND_DIAGNOSE;
+    pn532_packetbuffer[1] = NumTst;
+
+    DMSG("Diagnose\n");
+
+    if(_interface->writeCommand(pn532_packetbuffer,2,InParam,InParamSize)){
+        return false;
+    }
+    uint8_t s=255;
+    _interface->readResponse(pn532_packetbuffer,&s,timeout);
+
+    if(pn532_packetbuffer[0]!=0x01){
+        return false;
+    }
+
+    memmove(OutParam,&pn532_packetbuffer[1],s-1);
+    return true;
+}
+
 bool PN532::SAMConfig(){
     pn532_packetbuffer[0] = PN532_COMMAND_SAMCONFIGURATION;
     pn532_packetbuffer[1] = 0x01; // normal mode;
@@ -341,7 +361,10 @@ uint8_t PN532::inDataExchange(const uint8_t tg,const uint8_t *send,const uint16_
     const uint8_t *sendlist[]={send};
     return inDataExchange(tg,sendlist,&sendlen,(const uint8_t)1,response,responselen,timeout);
 }
-uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen,const uint16_t timeout){
+uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen,uint8_t *response,uint16_t *responselen,const uint16_t timeout){
+    if(responselen!=NULL){
+        *responselen=0;
+    }
     pn532_packetbuffer[0]=PN532_COMMAND_TGINITASTARGET;
     pn532_packetbuffer[1]=mode;
     const uint8_t *sendlist[]={
@@ -370,11 +393,21 @@ uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,con
         return 0;
     }
 
-    return pn532_packetbuffer[1];
+    uint8_t status=pn532_packetbuffer[1];
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return status;
+    }
+
+    if(responselen!=NULL&&response!=NULL){
+        *responselen=length-2;
+        memmove(response,&pn532_packetbuffer[2],*responselen);
+    }
+    return status;
 }
 
-uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen){
-    return tgInitAsTarget(mode,mifareParams,felicaParams,nfcid,gt,gtlen,tk,tklen,0);
+uint8_t PN532::tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen,uint8_t *response,uint16_t *responselen){
+    return tgInitAsTarget(mode,mifareParams,felicaParams,nfcid,gt,gtlen,tk,tklen,response,responselen,0);
 }
 uint8_t PN532::tgGetData(uint8_t *response,uint16_t *responselen){
     *responselen=0;
@@ -391,7 +424,7 @@ uint8_t PN532::tgGetData(uint8_t *response,uint16_t *responselen){
     }
     uint8_t status=pn532_packetbuffer[1];
     *responselen=length-2;
-    memmove(response,&pn532_packetbuffer[2],*response);
+    memmove(response,&pn532_packetbuffer[2],*responselen);
     return status;
 }
 uint8_t PN532::tgSetData(const uint8_t *data,const uint16_t datalen){
