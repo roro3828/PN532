@@ -32,7 +32,7 @@ void loop()
     uint8_t buf[1024];
     uint8_t size;
     PN532::PICC::Felica felica;
-    int t=nfc.PollingFelica(1,0x03,0x01,0,&felica);
+    int t=nfc.PollingFelica(1,0xFFFF,0x01,0,&felica);
     if(t==0){
         return;
     }
@@ -48,8 +48,18 @@ void loop()
     }
     Serial.print("\ncode:");
     Serial.println(felica.systemcode,HEX);
-    Serial.print("Mode:");
-    Serial.println(nfc.felica_requestResponse(&felica),HEX);
+    //Serial.print("Mode:");
+    //Serial.println(nfc.felica_requestResponse(&felica),HEX);
+
+    uint8_t system_code_count;
+    uint16_t system_code_list[16];
+    felica.requestSystemCode(system_code_list,&system_code_count);
+    Serial.printf("System code count:%d\n",system_code_count);
+    Serial.printf("System codes:");
+    for(int i=0;i<system_code_count;i++){
+        Serial.printf("%04X ",system_code_list[i]);
+    }
+    Serial.printf("\n");
 
     uint16_t scode[]={0x090f};
     uint8_t blockData[3][16];

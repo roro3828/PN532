@@ -226,7 +226,6 @@ public:
             uint16_t readWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,uint8_t response[][16],uint8_t *response_count);
             /**
              * @brief Write block data to service whitch dosen't require encryption.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
-             * @param[in] felica Felica
              * @param[in] service_count Service count. (minimum 0, maximum 16)
              * @param[in] servicecode_list List of service codes. Size must be service_count
              * @param[in] block_count Block count.
@@ -235,6 +234,13 @@ public:
              * @return StatusFlag See 4.5 https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
             */
             uint16_t writeWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,const uint8_t blockData[][16]);
+            /**
+             * @brief Get System codes in felica card.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+             * @param[out] system_code_list System code list
+             * @param[out] system_code_count System code count
+             * @return Status
+             */
+            uint16_t requestSystemCode(uint16_t *system_code_list,uint8_t *system_code_count);
         };
     };
 
@@ -381,7 +387,14 @@ public:
     */
     uint16_t felica_writeWithoutEncryption(const PICC::Felica *felica,const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,const uint8_t blockData[][16]);
 
-    
+    /**
+     * @brief Get System codes in felica card.see https://www.sony.co.jp/Products/felica/business/tech-support/data/card_usersmanual_2.2j.pdf
+     * @param[in] felica Felica
+     * @param[out] system_code_list System code list
+     * @param[out] system_code_count System code count
+     * @return Status
+     */
+    uint16_t felica_requestSystemCode(const PICC::Felica *felica,uint16_t *system_code_list,uint8_t *system_code_count);
 
     // Help functions to display formatted text
     static void PrintHex(const uint8_t *data, const uint32_t numBytes);

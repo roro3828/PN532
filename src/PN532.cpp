@@ -617,6 +617,35 @@ uint16_t PN532::felica_writeWithoutEncryption(const PICC::Felica *felica,const u
     return statusflag;
 }
 
+uint16_t PN532::felica_requestSystemCode(const PICC::Felica *felica,uint16_t *system_code_list,uint8_t *system_code_count){
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE]=10;
+    pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE+1]=FELICA_CMD_REQUEST_SYSTEM_CODE;
+    uint16_t length=PN532_PACKET_BUF_LEN;
+    const uint8_t *sendlist[]={
+        &pn532_packetbuffer[IN_DATA_EXCHANGE_USE_SIZE],
+        felica->idm
+    };
+    const uint16_t sendlenlist[]={
+        2,
+        8
+    };
+
+
+    uint8_t status=inDataExchange(felica->tg,sendlist,sendlenlist,2,pn532_packetbuffer,&length);
+    if(status&0b111111!=0){
+        DMSG("Error");
+        return status;
+    }
+
+    *system_code_count=pn532_packetbuffer[10];
+    for(uint8_t i=0;i<*system_code_count;i++){
+        uint16_t system_code=pn532_packetbuffer[11+i*2];
+        system_code=(system_code<<8)|pn532_packetbuffer[11+i*2+1];
+        system_code_list[i]=system_code;
+    }
+    return 0;
+}
+
 uint16_t PN532::PICC::picc::sendAPDU(const uint8_t CLA,const uint8_t INS,const uint8_t P1,const uint8_t P2,const uint8_t *data,const uint16_t dataLength,uint8_t *response,uint16_t *responseLength,uint16_t le,uint16_t timeout){
     return this->pcd->sendAPDU(this->tg,CLA,INS,P1,P2,data,dataLength,response,responseLength,le,timeout);
 }
@@ -647,4 +676,7 @@ uint16_t PN532::PICC::Felica::readWithoutEncryption(const uint8_t service_count,
 }
 uint16_t PN532::PICC::Felica::writeWithoutEncryption(const uint8_t service_count,const uint16_t *servicecode_list,const uint8_t block_count,const uint8_t *block_list,const uint8_t blockData[][16]){
     return this->pcd->felica_writeWithoutEncryption(this,service_count,servicecode_list,block_count,block_list,blockData);
+}
+uint16_t PN532::PICC::Felica::requestSystemCode(uint16_t *system_code_list,uint8_t *system_code_count){
+    return this->pcd->felica_requestSystemCode(this,system_code_list,system_code_count);
 }
