@@ -249,6 +249,10 @@ public:
 
     // Generic PN532 functions
     /**
+     * 
+     */
+    bool Diagnose(const uint8_t NumTst,const uint8_t *InParam,const uint8_t InParamSize,uint8_t *OutParam,uint16_t timeout=0U);
+    /**
      * @brief  Configures the SAM (Secure Access Module)
     */
     bool SAMConfig();
@@ -335,8 +339,8 @@ public:
     uint8_t inDataExchange(const uint8_t tg,const uint8_t **sendlist,const uint16_t *sendlenlist,const uint8_t sendcount,uint8_t *response,uint16_t *responselen,uint16_t timeout=1000U);
 
     
-    uint8_t tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen);
-    uint8_t tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen,const uint16_t timeout);
+    uint8_t tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen,uint8_t *response,uint16_t *responselen);
+    uint8_t tgInitAsTarget(const uint8_t mode,const uint8_t *mifareParams,const uint8_t *felicaParams,const uint8_t *nfcid,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen,uint8_t *response,uint16_t *responselen,const uint16_t timeout);
     //tgInitAsTarget(const uint8_t mode,const uint16_t sensres,const uint8_t *nfcid1,const uint8_t selres,const uint8_t *nfcid2,const uint8_t *pad,const uint16_t *systemcode,const uint8_t *nfcid3,const uint8_t *gt,const uint8_t gtlen,const uint8_t *tk,const uint8_t tklen)
     uint8_t tgGetData(uint8_t *response,uint16_t *responselen);
     uint8_t tgSetData(const uint8_t *data,const uint16_t datalen);

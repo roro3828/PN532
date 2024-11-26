@@ -111,13 +111,22 @@ int8_t PN532_I2C::writeCommand(const uint8_t *header, uint8_t hlen,const uint8_t
 int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
     uint16_t time = 0;
     uint16_t length;
+    uint8_t tmp=0x00;
 
     // [RDY] 00 00 FF LEN LCS (TFI PD0 ... PDn) DCS 00
     do{
         if (_wire->requestFrom(PN532_I2C_ADDRESS, len)){
-            if (read() & 1){ // check first byte --- status
+            tmp=read();
+            if (tmp & 1){ // check first byte --- status
+                DMSG("ReadReady...:");
+                DMSG_HEX(tmp);
+                DMSG("\n");
                 break; // PN532 is ready
             }
+            DMSG("Invalid...:");
+            DMSG_HEX(tmp);
+            DMSG("\n");
+            tmp=0x66;
         }
 
         delay(1);
@@ -125,6 +134,9 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
         if ((0 != timeout) && (time > timeout)){
             return PN532_TIMEOUT;
         }
+        DMSG("Waiting for ");
+        DMSG(time);
+        DMSG("ms...\n");
     } while (1);
 
     if (PN532_PREAMBLE != read() || // PREAMBLE
@@ -132,6 +144,7 @@ int32_t PN532_I2C::getResponseLength(uint16_t len, uint16_t timeout){
         PN532_STARTCODE2 != read()    // STARTCODE2
     )
     {
+        DMSG("Invalid frame.\n");
         return PN532_INVALID_FRAME;
     }
 
